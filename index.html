@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NookPhone OS - NookLink</title>
+    
+    <meta name="theme-color" content="#7FE2C3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+
+    <!-- 引入 LeanCloud SDK -->
+    <script src="https://code.bdstatic.com/npm/leancloud-storage@4.12.0/dist/av-min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Kosugi+Maru&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        :root {
+            --theme-bg: #7FE2C3;
+            --theme-pattern: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40' fill='%23ffffff' fill-opacity='0.2' fill-rule='evenodd'/%3E%3C/svg%3E");
+            --theme-primary: #3DAA86; 
+            --theme-secondary: #FDFDF6;
+            --theme-text: #59584D;
+            --theme-btn-shadow: #2D8666;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        body {
+            font-family: 'Varela Round', 'Kosugi Maru', sans-serif;
+            background-color: var(--theme-bg);
+            background-image: var(--theme-pattern);
+            color: var(--theme-text);
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background-color 0.6s ease;
+        }
+
+        /* Nook UI Elements */
+        .nook-card {
+            background-color: #FDFDF6;
+            border-radius: 30px;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.05), 0 12px 24px rgba(0,0,0,0.05); 
+            padding: 20px;
+            position: relative;
+        }
+        
+        .nook-btn {
+            background-color: var(--theme-primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 999px;
+            font-weight: 800;
+            box-shadow: 0 6px 0 var(--theme-btn-shadow);
+            transition: all 0.1s;
+            position: relative;
+            top: 0;
+        }
+        .nook-btn:active { top: 6px; box-shadow: 0 0 0 var(--theme-btn-shadow); }
+        .nook-btn:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(100%); }
+
+        .nook-btn-secondary {
+            background-color: #E0E0E0;
+            color: #7A7A7A;
+            box-shadow: 0 6px 0 #BDBDBD;
+        }
+        .nook-btn-secondary:active { top: 6px; box-shadow: none; }
+
+        .nook-input {
+            width: 100%;
+            background: #F0F0F0;
+            border: 2px solid transparent;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-weight: bold;
+            color: #59584D;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .nook-input:focus {
+            background: #FFFFFF;
+            border-color: var(--theme-primary);
+            box-shadow: 0 0 0 4px rgba(61, 170, 134, 0.2);
+        }
+
+        .app-icon {
+            width: 64px; height: 64px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .app-icon:active { transform: scale(0.95); }
+
+        .animate-pop { animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop-in { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        /* 滚动条隐藏但可滚动 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        const AV = window.AV;
+
+        // --- 配置区 ---
+        const LEANCLOUD_APP_ID = "Cc5uslAHhf3AdOb6NLsVdNn1-gzGzoHsz"; 
+        const LEANCLOUD_APP_KEY = "OQNPvAZWG2bXRm9vTqRL5r8S";
+        const LEANCLOUD_SERVER_URL = "https://cc5uslah.lc-cn-n1-shared.com";
+
+        // 头像库
+        const AVATAR_LIBRARY = [
+            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2359584D' stroke-width='2'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E",
+            "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
+            "https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka",
+            "https://api.dicebear.com/7.x/avataaars/svg?seed=Zack",
+            "https://api.dicebear.com/7.x/avataaars/svg?seed=Molly",
+            "https://api.dicebear.com/7.x/avataaars/svg?seed=Bear",
+            "https://api.dicebear.com/7.x/avataaars/svg?seed=Leo",
+            "https://api.dicebear.com/7.x/notionists/svg?seed=Lola",
+            "https://api.dicebear.com/7.x/notionists/svg?seed=Sam"
+        ];
+
+        // 初始化 LeanCloud
+        try {
+            if (!AV.applicationId) {
+                AV.init({ appId: LEANCLOUD_APP_ID, appKey: LEANCLOUD_APP_KEY, serverURLs: LEANCLOUD_SERVER_URL });
+            }
+        } catch(e) { console.error("AV init error", e); }
+
+        // --- 图标组件 ---
+        const Icon = ({ path, size=24, color="currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                {path}
+            </svg>
+        );
+        const Icons = {
+            Leaf: <><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></>,
+            User: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+            CreditCard: <><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></>,
+            Settings: <><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>,
+            Cloud: <><path d="M17.5 19c0-1.7-1.3-3-3-3h-1.1c-.2-3.1-2.9-5.5-6-5.5a6 6 0 0 0-5.6 8H17.5Z"/><path d="M12 2v8"/><path d="m9 7 3-3 3 3"/></>,
+            LogOut: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></>,
+            Lock: <><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
+            Book: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></>,
+            Plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+            Trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>
+        };
+
+        // --- 默认数据 ---
+        const DEFAULT_DATA = {
+            stats: { level: 1, miles: 500, pocket: 3000, savings: 50000 },
+            tasks: [
+                { id: 1, title: '初次抵达', reward: 500, completed: false },
+                { id: 2, title: '向狸克问好', reward: 200, completed: false },
+            ],
+            themeId: 'nook',
+            avatar: AVATAR_LIBRARY[0],
+            ledger: [] // 🟢 新增记账数据: { id, type: 'income'|'expense', amount, category, note, date }
+        };
+
+        // ==================
+        // 登录/注册组件
+        // ==================
+        const AuthScreen = ({ onLogin }) => {
+            const [isRegister, setIsRegister] = useState(false);
+            const [username, setUsername] = useState("");
+            const [password, setPassword] = useState("");
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState("");
+
+            const handleSubmit = async () => {
+                if (!username || !password) return setError("请填写账号和密码");
+                setLoading(true);
+                setError("");
+                try {
+                    if (isRegister) {
+                        const user = new AV.User();
+                        user.setUsername(username);
+                        user.setPassword(password);
+                        user.set('gameData', JSON.stringify(DEFAULT_DATA));
+                        await user.signUp();
+                        onLogin(user, DEFAULT_DATA);
+                    } else {
+                        const user = await AV.User.logIn(username, password);
+                        let gameData = DEFAULT_DATA;
+                        const cloudDataStr = user.get('gameData');
+                        if (cloudDataStr) {
+                            try { 
+                                const parsed = JSON.parse(cloudDataStr);
+                                gameData = { ...DEFAULT_DATA, ...parsed };
+                                // 确保 ledger 数组存在
+                                if (!gameData.ledger) gameData.ledger = [];
+                            } catch(e){}
+                        }
+                        onLogin(user, gameData);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    setError(isRegister ? "注册失败: 用户名可能已存在" : "登录失败: 账号或密码错误");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-[#7FE2C3] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTAgNDBMNDAgMEgyMEwwIDIwTTQwIDQwVjIwTDIwIDQwIiBmaWxsPSIjZmZmZmZmIiBmaWxsLW9wYWNpdHk9IjAuMiIgZmlsbC1ydWxlPSJldmVub2RkIi8+PC9zdmc+')] animate-pop">
+                    <div className="mb-8 flex flex-col items-center">
+                        <div className="w-24 h-24 bg-white rounded-[30px] flex items-center justify-center shadow-lg mb-4 transform rotate-3">
+                            <Icon path={Icons.Leaf} size={60} color="#3DAA86"/>
+                        </div>
+                        <h1 className="text-3xl font-black text-[#59584D] tracking-wide">NookLink</h1>
+                        <p className="text-[#3DAA86] font-bold text-sm bg-white/50 px-3 py-1 rounded-full mt-2 backdrop-blur-sm">
+                            {isRegister ? "居民登记处" : "欢迎回家"}
+                        </p>
+                    </div>
+
+                    <div className="nook-card w-full max-w-xs shadow-2xl border-[6px] border-white/40">
+                        {error && (
+                            <div className="bg-red-100 text-red-500 text-xs font-bold p-3 rounded-xl mb-4 text-center border-l-4 border-red-500">{error}</div>
+                        )}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 ml-2 mb-1 block">护照名称 (账号)</label>
+                                <input className="nook-input" placeholder="输入您的名字" value={username} onChange={e=>setUsername(e.target.value)}/>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 ml-2 mb-1 block">密码</label>
+                                <input className="nook-input" type="password" placeholder="********" value={password} onChange={e=>setPassword(e.target.value)}/>
+                            </div>
+                        </div>
+                        <button onClick={handleSubmit} disabled={loading} className="nook-btn w-full mt-6 flex justify-center items-center gap-2">
+                            {loading ? "通讯中..." : (isRegister ? "创建档案" : "立即登岛")}
+                        </button>
+                        <div className="mt-4 text-center">
+                            <button onClick={() => { setIsRegister(!isRegister); setError(""); }} className="text-xs font-bold text-[#3DAA86] underline decoration-2 underline-offset-2 hover:text-[#2D8666]">
+                                {isRegister ? "已有账号？去登录" : "新居民？去办理护照"}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="mt-8 text-white/60 font-bold text-xs">NOOK INC. SECURE LOGIN</div>
+                </div>
+            );
+        };
+
+        // ==================
+        // Apps
+        // ==================
+        const THEMES = [
+            { id: 'nook', name: 'Nook 经典', bg: '#7FE2C3', primary: '#3DAA86', text: '#59584D' },
+            { id: 'sakura', name: '樱花季', bg: '#FFC6D0', primary: '#FF7D9A', text: '#7A4A53' },
+            { id: 'summer', name: '夏日贝壳', bg: '#6AC4F6', primary: '#3490DC', text: '#2C5282' },
+            { id: 'dodo', name: 'DAL 航空', bg: '#2C5282', primary: '#ECC94B', text: '#ffffff' }
+        ];
+
+        // --- 🟢 新增：记账本 App ---
+        const LedgerApp = ({ ledger, setLedger }) => {
+            const [view, setView] = useState('list'); // 'list' or 'add'
+            
+            // 添加表单状态
+            const [type, setType] = useState('expense');
+            const [amount, setAmount] = useState('');
+            const [category, setCategory] = useState('其他');
+            const [note, setNote] = useState('');
+
+            const categories = type === 'expense' 
+                ? ['大头菜', '家具', '服饰', '岛建', '工具', '饮食', '其他']
+                : ['卖出', '利息', '任务', '打工', '其他'];
+
+            const summary = useMemo(() => {
+                let inc = 0, exp = 0;
+                ledger.forEach(r => r.type === 'income' ? inc += Number(r.amount) : exp += Number(r.amount));
+                return { income: inc, expense: exp, balance: inc - exp };
+            }, [ledger]);
+
+            const handleAdd = () => {
+                if(!amount) return alert("请输入金额");
+                const newRecord = {
+                    id: Date.now(),
+                    type,
+                    amount: Number(amount),
+                    category,
+                    note,
+                    date: new Date().toLocaleDateString()
+                };
+                setLedger([newRecord, ...ledger]);
+                // 重置表单
+                setAmount(''); setNote(''); setView('list');
+            };
+
+            const handleDelete = (id) => {
+                if(confirm('确定删除这条记录吗？')) {
+                    setLedger(ledger.filter(r => r.id !== id));
+                }
+            };
+
+            if (view === 'add') {
+                return (
+                    <div className="flex flex-col h-full animate-pop">
+                        <div className="flex items-center gap-2 mb-4">
+                            <button onClick={()=>setView('list')} className="p-2 bg-gray-200 rounded-full"><Icon path={Icons.Book} size={20}/></button>
+                            <h2 className="text-xl font-black opacity-80">记一笔</h2>
+                        </div>
+                        <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
+                            {/* 类型切换 */}
+                            <div className="flex bg-gray-200 p-1 rounded-xl">
+                                <button onClick={()=>setType('expense')} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='expense'?'bg-white text-red-500 shadow-sm':'text-gray-500'}`}>支出</button>
+                                <button onClick={()=>setType('income')} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='income'?'bg-white text-green-500 shadow-sm':'text-gray-500'}`}>收入</button>
+                            </div>
+                            
+                            {/* 金额输入 */}
+                            <div className="nook-card">
+                                <label className="text-xs font-bold text-gray-400 mb-1 block">金额</label>
+                                <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} className="w-full text-3xl font-black bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="0"/>
+                            </div>
+
+                            {/* 分类选择 */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择分类</label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {categories.map(c => (
+                                        <button key={c} onClick={()=>setCategory(c)} className={`py-2 rounded-xl text-xs font-bold border-2 ${category===c?'border-[#3DAA86] bg-white text-[#3DAA86]':'border-transparent bg-white/50 text-gray-500'}`}>
+                                            {c}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 备注 */}
+                            <div className="nook-card p-3">
+                                <input value={note} onChange={e=>setNote(e.target.value)} className="w-full bg-transparent outline-none text-sm font-bold placeholder-gray-300" placeholder="添加备注 (选填)"/>
+                            </div>
+
+                            <button onClick={handleAdd} className="nook-btn w-full flex justify-center mt-4">完成</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex flex-col h-full animate-pop">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-[#FFD166] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Book} /></div>
+                            <h2 className="text-xl font-black opacity-80">记账本</h2>
+                        </div>
+                        <button onClick={()=>setView('add')} className="w-8 h-8 bg-[#3DAA86] rounded-full flex items-center justify-center text-white shadow-md active:scale-95 transition">
+                            <Icon path={Icons.Plus} size={18}/>
+                        </button>
+                    </div>
+
+                    {/* 概览卡片 */}
+                    <div className="bg-[#3D405B] rounded-[24px] p-5 text-[#F4F1DE] shadow-lg mb-4 flex justify-between items-center relative overflow-hidden">
+                        <div className="absolute right-0 bottom-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mb-6"></div>
+                        <div>
+                            <div className="text-[10px] opacity-60 font-bold mb-1">本月结余</div>
+                            <div className="text-2xl font-black tracking-wide">{summary.balance.toLocaleString()}</div>
+                        </div>
+                        <div className="text-right space-y-1">
+                            <div><span className="text-[10px] bg-green-500/20 text-green-300 px-1.5 rounded mr-1">收</span><span className="text-sm font-bold">{summary.income.toLocaleString()}</span></div>
+                            <div><span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 rounded mr-1">支</span><span className="text-sm font-bold">{summary.expense.toLocaleString()}</span></div>
+                        </div>
+                    </div>
+
+                    {/* 列表 */}
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
+                        {ledger.length === 0 && (
+                            <div className="text-center text-gray-400 py-10 text-xs font-bold">暂无记录，快去记一笔吧！</div>
+                        )}
+                        {ledger.map(item => (
+                            <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm ${item.type==='expense'?'bg-red-400':'bg-green-400'}`}>
+                                        {item.category.substring(0,2)}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-[#59584D] text-sm">{item.category} <span className="text-xs font-normal text-gray-400 ml-1">{item.note}</span></div>
+                                        <div className="text-[10px] text-gray-400 font-bold">{item.date}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className={`font-black ${item.type==='expense'?'text-red-500':'text-green-500'}`}>
+                                        {item.type==='expense'?'-':'+'}{item.amount.toLocaleString()}
+                                    </span>
+                                    <button onClick={()=>handleDelete(item.id)} className="text-gray-300 hover:text-red-400 transition">
+                                        <Icon path={Icons.Trash} size={14}/>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const NookMilesApp = ({ userStats, tasks }) => (
+            <div className="flex flex-col h-full animate-pop">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 bg-[#3DAA86] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Leaf} /></div>
+                        <h2 className="text-xl font-black opacity-80">集里游+</h2>
+                    </div>
+                    <div className="bg-[#E6FFFA] px-3 py-1 rounded-full text-[#38B2AC] font-black text-sm border-2 border-[#38B2AC]">{userStats.miles} miles</div>
+                </div>
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+                    {tasks.map(t => (
+                        <div key={t.id} className={`bg-white rounded-2xl p-4 border-l-8 shadow-sm flex justify-between items-center ${t.completed ? 'border-gray-300 opacity-60' : 'border-[#F4A261]'}`}>
+                            <div>
+                                <div className="font-bold text-[#59584D]">{t.title}</div>
+                                <div className="text-xs font-black text-[#38B2AC]">+{t.reward}</div>
+                            </div>
+                            {t.completed && <div className="text-[#3DAA86]"><Icon path={Icons.Leaf}/></div>}
+                        </div>
+                    ))}
+                    <div className="text-center text-xs opacity-50 py-4">更多任务将在第二天刷新...</div>
+                </div>
+            </div>
+        );
+
+        const SettingsApp = ({ user, currentTheme, currentAvatar, changeTheme, changeAvatar, onSave, onLogout, loading }) => (
+            <div className="flex flex-col h-full animate-pop">
+                <div className="flex items-center gap-2 mb-6">
+                    <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center text-white"><Icon path={Icons.Settings} /></div>
+                    <h2 className="text-xl font-black opacity-80">设置</h2>
+                </div>
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
+                    <div className="nook-card border-l-8 border-[#3DAA86]">
+                        <h3 className="font-bold text-[#59584D] mb-2">居民信息</h3>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-gray-400 overflow-hidden border-2 border-gray-100 shadow-sm">
+                                <img src={currentAvatar} alt="avatar" className="w-full h-full object-cover"/>
+                            </div>
+                            <div>
+                                <div className="text-lg font-black text-[#59584D]">{user.getUsername()}</div>
+                                <div className="text-xs text-gray-500 font-bold">已登录 NookLink</div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button onClick={onSave} disabled={loading} className="nook-btn text-sm flex justify-center items-center gap-2">
+                                {loading ? "保存中..." : <><Icon path={Icons.Cloud} size={16}/> 保存数据</>}
+                            </button>
+                            <button onClick={onLogout} className="nook-btn-secondary py-3 px-4 rounded-full font-bold text-sm text-gray-600 flex justify-center items-center gap-2">
+                                <Icon path={Icons.LogOut} size={16}/> 退出
+                            </button>
+                        </div>
+                    </div>
+                    <div className="nook-card">
+                        <h3 className="font-bold text-[#59584D] mb-3">更换证件照</h3>
+                        <div className="grid grid-cols-4 gap-2">
+                            {AVATAR_LIBRARY.map((url, idx) => (
+                                <button key={idx} onClick={()=>changeAvatar(url)}
+                                    className={`w-full aspect-square rounded-full border-4 overflow-hidden bg-white flex items-center justify-center transition-transform hover:scale-105
+                                    ${currentAvatar === url ? 'border-[#3DAA86]' : 'border-transparent'}`}>
+                                    <img src={url} className="w-full h-full object-cover"/>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="nook-card">
+                        <h3 className="font-bold text-[#59584D] mb-3">更换手机壳</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            {THEMES.map(t => (
+                                <button key={t.id} onClick={()=>changeTheme(t.id)} 
+                                    className={`p-3 rounded-xl border-4 transition-all flex items-center gap-2 text-left bg-gray-100
+                                    ${currentTheme === t.id ? 'border-[#3DAA86] bg-white shadow-md' : 'border-transparent'}`}>
+                                    <div className="w-6 h-6 rounded-full border border-white shadow-sm" style={{background: t.bg}}></div>
+                                    <span className="text-xs font-bold text-gray-600">{t.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const PassportApp = ({ user, stats, avatar }) => (
+            <div className="flex flex-col h-full animate-pop">
+                <div className="bg-[#3D405B] rounded-[24px] overflow-hidden shadow-lg mb-6 text-[#F4F1DE] relative border-4 border-white/20 p-5">
+                    <div className="flex gap-4 items-center border-b border-white/10 pb-4 mb-4">
+                        <div className="w-20 h-20 bg-[#F4F1DE] rounded-2xl flex items-center justify-center overflow-hidden border-4 border-white/10 shadow-inner">
+                            <img src={avatar} className="w-full h-full object-cover"/>
+                        </div>
+                        <div>
+                            <div className="text-xl font-black">{user.getUsername()}</div>
+                            <div className="text-sm opacity-80">Lv.{stats.level} 居民</div>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div><div className="text-[10px] opacity-50 font-bold">TITLE</div><div className="text-sm font-bold">未来可期的 / 岛民</div></div>
+                        <div><div className="text-[10px] opacity-50 font-bold">BIRTHDAY</div><div className="text-sm font-bold">12/10</div></div>
+                    </div>
+                </div>
+                 <div className="nook-card flex-1 flex items-center justify-center text-center p-6"><div className="opacity-50"><div className="text-4xl mb-2">✈️</div><p className="font-bold">更多护照功能开发中...</p></div></div>
+            </div>
+        );
+
+        // --- Main App ---
+        const App = () => {
+            const [currentUser, setCurrentUser] = useState(null);
+            const [data, setData] = useState(null);
+            const [currentApp, setCurrentApp] = useState(null);
+            const [saveLoading, setSaveLoading] = useState(false);
+            const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+            useEffect(() => {
+                const checkSession = async () => {
+                    const user = AV.User.current();
+                    if (user) {
+                        try {
+                            const cloudDataStr = user.get('gameData');
+                            let gameData = DEFAULT_DATA;
+                            if (cloudDataStr) {
+                                try { 
+                                    const parsed = JSON.parse(cloudDataStr);
+                                    gameData = { ...DEFAULT_DATA, ...parsed };
+                                    if (!gameData.ledger) gameData.ledger = [];
+                                } catch(e){}
+                            }
+                            setCurrentUser(user);
+                            setData(gameData);
+                        } catch(e) {
+                            console.error("Auto login error", e);
+                            await AV.User.logOut();
+                        }
+                    }
+                    setTimeout(() => setIsCheckingSession(false), 800);
+                };
+                checkSession();
+            }, []);
+
+            useEffect(() => {
+                if (data && data.themeId) {
+                    const t = THEMES.find(x => x.id === data.themeId) || THEMES[0];
+                    const r = document.documentElement.style;
+                    r.setProperty('--theme-bg', t.bg);
+                    r.setProperty('--theme-primary', t.primary);
+                    r.setProperty('--theme-text', t.text);
+                    r.setProperty('--theme-btn-shadow', t.id==='sakura'?'#D65D7A':(t.id==='dodo'?'#D69E2E':'#2D8666'));
+                }
+            }, [data]);
+
+            const handleLogin = (user, gameData) => {
+                setCurrentUser(user);
+                setData(gameData);
+            };
+
+            const handleLogout = async () => {
+                await AV.User.logOut();
+                setCurrentUser(null);
+                setData(null);
+                setCurrentApp(null);
+            };
+
+            const handleSave = async () => {
+                if (!currentUser) return;
+                setSaveLoading(true);
+                try {
+                    currentUser.set('gameData', JSON.stringify(data));
+                    await currentUser.save();
+                    alert("保存成功！数据已同步到云端。");
+                } catch(e) {
+                    alert("保存失败: " + e.message);
+                } finally {
+                    setSaveLoading(false);
+                }
+            };
+
+            const updateData = (key, val) => {
+                setData(prev => ({ ...prev, [key]: val }));
+            };
+
+            const AppIcon = ({ icon, label, onClick }) => (
+                <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={onClick}>
+                    <div className="app-icon group-active:scale-90 transition-transform">
+                        <Icon path={icon} size={32} color="#59584D"/>
+                    </div>
+                    <span className="text-xs font-bold bg-white/40 px-2 py-0.5 rounded-full text-[#59584D]">{label}</span>
+                </div>
+            );
+
+            if (isCheckingSession) {
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#7FE2C3] animate-pop">
+                         <div className="w-24 h-24 bg-white rounded-[30px] flex items-center justify-center shadow-lg mb-4 animate-bounce">
+                            <Icon path={Icons.Leaf} size={60} color="#3DAA86"/>
+                        </div>
+                        <div className="text-white/80 font-bold text-lg tracking-widest animate-pulse">NOOKLINK OS...</div>
+                    </div>
+                );
+            }
+
+            if (!currentUser || !data) {
+                return <AuthScreen onLogin={handleLogin} />;
+            }
+
+            return (
+                <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                    <div className="w-full max-w-md h-[85vh] bg-white/20 backdrop-blur-xl rounded-[45px] shadow-2xl border-[8px] border-white/40 relative overflow-hidden flex flex-col transition-all duration-500">
+                        <div className="h-12 flex justify-between items-center px-8 shrink-0 z-20 pt-2 text-[#59584D]">
+                            <div className="bg-white/40 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">12:42</div>
+                            <div className="bg-white/40 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm flex items-center gap-1"><div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div> NookWifi</div>
+                        </div>
+
+                        <div className="flex-1 overflow-hidden relative p-6">
+                            <div className={`absolute inset-0 p-8 grid grid-cols-3 content-start gap-y-8 gap-x-4 transition-all duration-500 ${currentApp ? '-translate-x-full opacity-0' : 'translate-x-0 opacity-100'}`}>
+                                <AppIcon icon={Icons.Leaf} label="集里游+" onClick={()=>setCurrentApp('miles')}/>
+                                <AppIcon icon={Icons.Book} label="记账本" onClick={()=>setCurrentApp('ledger')}/>
+                                <AppIcon icon={Icons.User} label="护照" onClick={()=>setCurrentApp('passport')}/>
+                                <AppIcon icon={Icons.CreditCard} label="ABD" onClick={()=>setCurrentApp('finance')}/>
+                                <AppIcon icon={Icons.Settings} label="设置" onClick={()=>setCurrentApp('settings')}/>
+                            </div>
+
+                            <div className={`absolute inset-0 p-6 bg-[#FDFDF6]/95 backdrop-blur-md rounded-[35px] transition-all duration-500 flex flex-col shadow-inner ${currentApp ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
+                                {currentApp === 'miles' && <NookMilesApp userStats={data.stats} tasks={data.tasks}/>}
+                                {currentApp === 'ledger' && <LedgerApp ledger={data.ledger} setLedger={(v)=>updateData('ledger', v)}/>}
+                                {currentApp === 'settings' && <SettingsApp 
+                                    user={currentUser} 
+                                    currentTheme={data.themeId} 
+                                    currentAvatar={data.avatar}
+                                    changeTheme={(id)=>updateData('themeId', id)}
+                                    changeAvatar={(url)=>updateData('avatar', url)}
+                                    onSave={handleSave}
+                                    onLogout={handleLogout}
+                                    loading={saveLoading}
+                                />}
+                                {currentApp === 'passport' && <PassportApp user={currentUser} stats={data.stats} avatar={data.avatar}/>}
+                                {(currentApp === 'finance') && (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-4">
+                                        <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center"><Icon path={Icons.Lock} size={32}/></div>
+                                        <div className="font-bold text-sm">功能维护中</div>
+                                    </div>
+                                )}
+                                <div className="mt-auto pt-4 flex justify-center">
+                                    <button onClick={()=>setCurrentApp(null)} className="nook-btn-secondary px-6 py-2 rounded-full font-bold text-sm">返回桌面</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="h-8 w-full flex justify-center items-center shrink-0 z-20 pb-2">
+                            <div className="w-1/3 h-1.5 bg-white/60 rounded-full"></div>
+                        </div>
+                    </div>
+                    <div className="mt-4 text-white/80 font-bold text-xs tracking-widest opacity-80 uppercase">Nook Inc. OS v3.3 (Ledger)</div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
