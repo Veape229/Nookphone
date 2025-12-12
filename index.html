@@ -54,6 +54,7 @@
             transition: background-color 0.6s ease;
         }
 
+        /* UI Styles */
         .nook-card {
             background-color: #FDFDF6;
             border-radius: 30px;
@@ -127,20 +128,30 @@
         .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .2s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         input:checked + .slider { background-color: #3DAA86; }
         input:checked + .slider:before { transform: translateX(20px); }
+        
+        /* 列表项动画 */
+        .list-item-anim {
+            opacity: 0; 
+            animation: slideUpFade 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+        @keyframes slideUpFade {
+            0% { opacity: 0; transform: translateY(15px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef, memo } = React;
+        const { useState, useEffect, useMemo, useRef, memo, useCallback } = React;
         const AV = window.AV;
 
         // --- 配置区 ---
         const LEANCLOUD_APP_ID = "Cc5uslAHhf3AdOb6NLsVdNn1-gzGzoHsz"; 
         const LEANCLOUD_APP_KEY = "OQNPvAZWG2bXRm9vTqRL5r8S";
         const LEANCLOUD_SERVER_URL = "https://cc5uslah.lc-cn-n1-shared.com";
-
+//头像区
         const AVATAR_LIBRARY = [
             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2359584D' stroke-width='2'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E",
             "https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E7%8B%B8%E7%8C%AB.jpg",
@@ -150,17 +161,7 @@
             "https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E4%BC%81%E9%B9%85%E8%BE%BE.jpg",
             "https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E5%A4%A7%E5%90%89.jpg",
             "https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E5%B0%8F%E6%B6%A6.jpg",
-            "https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E7%8B%971.jpg",
-        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E9%B9%BF1.jpg",
-        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E8%B5%B5%E5%A5%87.jpg",
-        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E7%8C%AB1.jpg",
-        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E7%8C%AB2.jpg",
-        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E6%9C%88%E5%85%94.jpg",
-        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E5%A8%83%E5%A8%831.jpg",
-        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E5%A8%83%E5%A8%832.jpg",
-        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E7%9C%BC%E9%95%9C%E7%BB%BF.jpg",
-        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E7%BB%BF.jpg",
-        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E5%A8%83%E5%A8%833.jpg"
+            "https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E7%8B%971.jpg"
         ];
 
         try {
@@ -197,6 +198,17 @@
             Danger: <><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>
         };
 
+        const THEMES = [
+            { id: 'nook', name: 'Nook 经典', bg: '#7FE2C3', primary: '#3DAA86', text: '#59584D', shadow: '#2D8666', pattern: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40' fill='%23ffffff' fill-opacity='0.2' fill-rule='evenodd'/%3E%3C/svg%3E")` },
+            { id: 'sakura', name: '樱花季', bg: '#FFC6D0', primary: '#FF7D9A', text: '#7A4A53', shadow: '#D65D7A', pattern: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='10' cy='10' r='4' fill='%23ffffff' fill-opacity='0.4'/%3E%3Ccircle cx='40' cy='40' r='3' fill='%23ffffff' fill-opacity='0.4'/%3E%3C/svg%3E")` },
+            { id: 'summer', name: '夏日贝壳', bg: '#6AC4F6', primary: '#3490DC', text: '#2C5282', shadow: '#2779BD', pattern: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 10 Q5 0 10 10 T20 10' fill='none' stroke='%23ffffff' stroke-opacity='0.3' stroke-width='2'/%3E%3C/svg%3E")` },
+            { id: 'autumn', name: '秋日落叶', bg: '#D68C45', primary: '#BC4B51', text: '#5A189A', shadow: '#9E2A2B', pattern: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20Z' fill='%23ffffff' fill-opacity='0.15'/%3E%3C/svg%3E")` },
+            { id: 'starry', name: '傅达观星', bg: '#2C3E50', primary: '#F1C40F', text: '#ECF0F1', shadow: '#F39C12', pattern: `url("data:image/svg+xml,%3Csvg width='50' height='50' viewBox='0 0 50 50' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M25 0L30 15L45 20L30 25L25 40L20 25L5 20L20 15Z' fill='%23ffffff' fill-opacity='0.1'/%3E%3C/svg%3E")` },
+            { id: 'mint', name: '薄荷苏打', bg: '#98FF98', primary: '#00A86B', text: '#004D40', shadow: '#00796B', pattern: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='10' height='10' fill='%23ffffff' fill-opacity='0.3'/%3E%3Crect x='10' y='10' width='10' height='10' fill='%23ffffff' fill-opacity='0.3'/%3E%3C/svg%3E")` },
+            { id: 'dodo', name: 'DAL 航空', bg: '#2C5282', primary: '#ECC94B', text: '#ffffff', shadow: '#D69E2E', pattern: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E")` },
+            { id: 'lavender', name: '薰衣草', bg: '#E6E6FA', primary: '#9370DB', text: '#4B0082', shadow: '#8A2BE2', pattern: `url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='15' cy='15' r='10' fill='none' stroke='%23ffffff' stroke-width='2' stroke-opacity='0.4'/%3E%3C/svg%3E")` }
+        ];
+
         const DEFAULT_DATA = {
             stats: { level: 1, miles: 500, pocket: 3000, savings: 50000, xp: 0 }, 
             tasks: [
@@ -207,81 +219,6 @@
             ledger: [],
             fitness: { profile: null, logs: {} }
         };
-
-        const THEMES = [
-            { 
-                id: 'nook', 
-                name: 'Nook 经典', 
-                bg: '#7FE2C3', 
-                primary: '#3DAA86', 
-                text: '#59584D',
-                shadow: '#2D8666',
-                pattern: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40' fill='%23ffffff' fill-opacity='0.2' fill-rule='evenodd'/%3E%3C/svg%3E")`
-            },
-            { 
-                id: 'sakura', 
-                name: '樱花季', 
-                bg: '#FFC6D0', 
-                primary: '#FF7D9A', 
-                text: '#7A4A53',
-                shadow: '#D65D7A',
-                pattern: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='10' cy='10' r='4' fill='%23ffffff' fill-opacity='0.4'/%3E%3Ccircle cx='40' cy='40' r='3' fill='%23ffffff' fill-opacity='0.4'/%3E%3C/svg%3E")`
-            },
-            { 
-                id: 'summer', 
-                name: '夏日贝壳', 
-                bg: '#6AC4F6', 
-                primary: '#3490DC', 
-                text: '#2C5282',
-                shadow: '#2779BD',
-                pattern: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 10 Q5 0 10 10 T20 10' fill='none' stroke='%23ffffff' stroke-opacity='0.3' stroke-width='2'/%3E%3C/svg%3E")`
-            },
-            { 
-                id: 'dodo', 
-                name: 'DAL 航空', 
-                bg: '#2C5282', 
-                primary: '#ECC94B', 
-                text: '#ffffff',
-                shadow: '#D69E2E',
-                pattern: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E")`
-            },
-            { 
-                id: 'autumn', 
-                name: '秋日落叶', 
-                bg: '#D68C45', 
-                primary: '#BC4B51', 
-                text: '#5A189A', 
-                shadow: '#9E2A2B', 
-                pattern: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20Z' fill='%23ffffff' fill-opacity='0.15'/%3E%3C/svg%3E")`
-            },
-            { 
-                id: 'starry', 
-                name: '傅达观星', 
-                bg: '#2C3E50', 
-                primary: '#F1C40F', 
-                text: '#ECF0F1', 
-                shadow: '#F39C12', 
-                pattern: `url("data:image/svg+xml,%3Csvg width='50' height='50' viewBox='0 0 50 50' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M25 0L30 15L45 20L30 25L25 40L20 25L5 20L20 15Z' fill='%23ffffff' fill-opacity='0.1'/%3E%3C/svg%3E")`
-            },
-            { 
-                id: 'mint', 
-                name: '薄荷苏打', 
-                bg: '#98FF98', 
-                primary: '#00A86B', 
-                text: '#004D40', 
-                shadow: '#00796B', 
-                pattern: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='10' height='10' fill='%23ffffff' fill-opacity='0.3'/%3E%3Crect x='10' y='10' width='10' height='10' fill='%23ffffff' fill-opacity='0.3'/%3E%3C/svg%3E")`
-            },
-            { 
-                id: 'lavender', 
-                name: '薰衣草', 
-                bg: '#E6E6FA', 
-                primary: '#9370DB', 
-                text: '#4B0082', 
-                shadow: '#8A2BE2', 
-                pattern: `url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='15' cy='15' r='10' fill='none' stroke='%23ffffff' stroke-width='2' stroke-opacity='0.4'/%3E%3C/svg%3E")`
-            }
-        ];
 
         const DIFFICULTIES = {
             simple: { label: '简单', xp: 2, color: 'bg-green-400', ring: 'ring-green-200' },
@@ -396,6 +333,17 @@
 
             const today = new Date().toLocaleDateString();
             const todayLog = fitness.logs[today] || { exercise: 0, intake: 0, weight: profile.weight || 0, records: [] };
+
+            // 🟢 Fix: Sync Profile State Effect
+            useEffect(() => {
+                if (fitness.profile) {
+                    setProfile(fitness.profile);
+                    setPHeight(fitness.profile.height);
+                    setPWeight(fitness.profile.weight);
+                    setPAge(fitness.profile.age);
+                    setPGender(fitness.profile.gender);
+                }
+            }, [fitness.profile]);
 
             const aggregatedData = useMemo(() => {
                 const dates = [];
@@ -575,7 +523,7 @@
                                 <div className="text-center text-xs text-gray-300 py-4 font-bold">暂无记录</div>
                             )}
                             {aggregatedData.history.map((rec, idx) => (
-                                <div key={rec.id || idx} className="bg-white rounded-xl p-3 flex justify-between items-center shadow-sm anim-stagger-item" style={{animationDelay: idx * 0.05 + 's'}}>
+                                <div key={idx} className="bg-white rounded-xl p-3 flex justify-between items-center shadow-sm anim-stagger-item">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${rec.type==='exercise'?'bg-orange-100 text-orange-500': (rec.type==='summary' ? 'bg-blue-100 text-blue-500' : 'bg-green-100 text-green-500')}`}>
                                             <Icon path={rec.type==='exercise'?Icons.Activity: (rec.type==='summary'?Icons.Book:Icons.Leaf)} size={16}/>
@@ -647,7 +595,7 @@
             );
         });
 
-        const LedgerApp = memo(({ ledger, setLedger }) => {
+        const LedgerApp = memo(({ ledger, onAdd, onDelete }) => {
             const [view, setView] = useState('list'); 
             const [type, setType] = useState('expense');
             const [amount, setAmount] = useState('');
@@ -662,11 +610,10 @@
 
             const handleAdd = () => {
                 if(!amount) return alert("请输入金额");
-                const newRecord = { id: Date.now(), type, amount: Number(amount), category, note, date: new Date().toLocaleDateString() };
-                setLedger([newRecord, ...ledger]);
+                onAdd({ type, amount: Number(amount), category, note, date: new Date().toLocaleDateString() });
                 setAmount(''); setNote(''); setView('list');
             };
-            const handleDelete = (id) => { if(confirm('确定删除这条记录吗？')) setLedger(ledger.filter(r => r.id !== id)); };
+            const handleDelete = (id) => { if(confirm('确定删除这条记录吗？')) onDelete(id); };
 
             if (view === 'add') {
                 return (
@@ -707,12 +654,12 @@
                     <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-20"> 
                         {ledger.length === 0 && <div className="text-center text-gray-400 py-10 text-xs font-bold">暂无记录，快去记一笔吧！</div>}
                         {ledger.map((item, idx) => (
-                            <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group anim-stagger-item" style={{animationDelay: idx * 0.05 + 's'}}>
+                            <div key={item.objectId || item.id} className="bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group anim-stagger-item" style={{animationDelay: idx * 0.05 + 's'}}>
                                 <div className="flex items-center gap-3">
                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm ${item.type==='expense'?'bg-red-400':'bg-green-400'}`}>{item.category.substring(0,2)}</div>
                                     <div><div className="font-bold text-[#59584D] text-sm">{item.category} <span className="text-xs font-normal text-gray-400 ml-1">{item.note}</span></div><div className="text-[10px] text-gray-400 font-bold">{item.date}</div></div>
                                 </div>
-                                <div className="flex items-center gap-3"><span className={`font-black ${item.type==='expense'?'text-red-500':'text-green-500'}`}>{item.type==='expense'?'-':'+'}{item.amount.toLocaleString()}</span><button onClick={()=>handleDelete(item.id)} className="text-gray-300 hover:text-red-400 transition"><Icon path={Icons.Trash} size={14}/></button></div>
+                                <div className="flex items-center gap-3"><span className={`font-black ${item.type==='expense'?'text-red-500':'text-green-500'}`}>{item.type==='expense'?'-':'+'}{item.amount.toLocaleString()}</span><button onClick={()=>handleDelete(item.objectId || item.id)} className="text-gray-300 hover:text-red-400 transition"><Icon path={Icons.Trash} size={14}/></button></div>
                             </div>
                         ))}
                     </div>
@@ -721,7 +668,7 @@
         });
 
         // --- NookMilesApp ---
-        const NookMilesApp = memo(({ userStats, tasks, setTasks, updateStats, addLedgerRecord, addFitnessRecord }) => {
+        const NookMilesApp = memo(({ userStats, tasks, onAddTask, onCompleteTask }) => {
             const [view, setView] = useState('list');
             const [newTitle, setNewTitle] = useState('');
             const [newDiff, setNewDiff] = useState('normal');
@@ -739,7 +686,6 @@
                 if((newType === '健身' || newType === '吃饭') && (!fitnessValue || fitnessValue <= 0)) return alert("请输入热量数值");
 
                 const newTask = {
-                    id: Date.now(),
                     title: newTitle,
                     difficulty: newDiff,
                     type: newType,
@@ -748,40 +694,9 @@
                     money: linkMoney ? { type: moneyType, amount: parseInt(moneyAmount) } : null,
                     calories: (newType === '健身' || newType === '吃饭') ? parseInt(fitnessValue) : null
                 };
-                setTasks([newTask, ...tasks]);
+                onAddTask(newTask);
                 setNewTitle(''); setView('list'); 
                 setLinkMoney(false); setMoneyAmount(''); setFitnessValue('');
-            };
-
-            const completeTask = (id) => {
-                const t = tasks.find(i=>i.id===id);
-                if(t && !t.completed) {
-                    let newStats = { 
-                        ...userStats, 
-                        miles: userStats.miles + t.reward, 
-                        xp: (userStats.xp || 0) + t.reward 
-                    };
-
-                    if (t.money) {
-                        if (t.money.type === 'income') newStats.pocket = (newStats.pocket || 0) + t.money.amount;
-                        else newStats.pocket = (newStats.pocket || 0) - t.money.amount;
-
-                        const ledgerRecord = {
-                            id: Date.now(), type: t.money.type, amount: t.money.amount, category: '任务', note: t.title, date: new Date().toLocaleDateString()
-                        };
-                        addLedgerRecord(ledgerRecord);
-                    }
-                    
-                    if (t.type === '健身' && t.calories) {
-                        addFitnessRecord('exercise', t.calories, t.title);
-                    }
-                    if (t.type === '吃饭' && t.calories) {
-                        addFitnessRecord('intake', t.calories, t.title);
-                    }
-
-                    updateStats(newStats);
-                    setTasks(tasks.map(item => item.id === id ? {...item, completed: true} : item));
-                }
             };
 
             if (view === 'add') {
@@ -792,63 +707,13 @@
                             <h2 className="text-xl font-black opacity-80">发布任务</h2>
                         </div>
                         <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
-                            <div className="nook-card p-4">
-                                <label className="text-xs font-bold text-gray-400 mb-1 block">任务内容</label>
-                                <input value={newTitle} onChange={e=>setNewTitle(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="例如：去钓鱼..."/>
-                            </div>
-                            
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择类型</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {taskTypes.map(t => (
-                                        <button key={t} onClick={()=>setNewType(t)} className={`py-2 rounded-xl text-xs font-bold border-2 ${newType===t?'border-[#3DAA86] bg-white text-[#3DAA86]':'border-transparent bg-white/50 text-gray-500'}`}>{t}</button>
-                                    ))}
-                                </div>
-                            </div>
-                            
-                            {(newType === '健身' || newType === '吃饭') && (
-                                <div className={`nook-card border-l-8 ${newType==='健身'?'border-orange-400':'border-green-400'}`}>
-                                    <label className="text-xs font-bold text-gray-500 mb-1 block">{newType === '健身' ? '预计消耗 (kcal)' : '预计摄入 (kcal)'}</label>
-                                    <input type="number" value={fitnessValue} onChange={e=>setFitnessValue(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none transition-colors" placeholder="0"/>
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择难度 (XP奖励)</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {Object.entries(DIFFICULTIES).map(([key, cfg]) => (
-                                        <button key={key} onClick={()=>setNewDiff(key)} 
-                                            className={`p-3 rounded-xl border-4 text-left transition-all relative overflow-hidden
-                                            ${newDiff===key ? 'border-[#3DAA86] bg-white shadow-md' : 'border-transparent bg-white/50'}`}>
-                                            <div className={`absolute top-0 right-0 p-1 px-2 text-[10px] text-white font-bold rounded-bl-lg ${cfg.color}`}>{cfg.xp} XP</div>
-                                            <div className="font-bold text-[#59584D]">{cfg.label}</div>
-                                            <div className={`w-2 h-2 rounded-full mt-1 ${cfg.color}`}></div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
+                            <div className="nook-card p-4"><label className="text-xs font-bold text-gray-400 mb-1 block">任务内容</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="例如：去钓鱼..."/></div>
+                            <div><label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择类型</label><div className="grid grid-cols-3 gap-2">{taskTypes.map(t => (<button key={t} onClick={()=>setNewType(t)} className={`py-2 rounded-xl text-xs font-bold border-2 ${newType===t?'border-[#3DAA86] bg-white text-[#3DAA86]':'border-transparent bg-white/50 text-gray-500'}`}>{t}</button>))}</div></div>
+                            {(newType === '健身' || newType === '吃饭') && (<div className={`nook-card border-l-8 ${newType==='健身'?'border-orange-400':'border-green-400'}`}><label className="text-xs font-bold text-gray-500 mb-1 block">{newType === '健身' ? '预计消耗 (kcal)' : '预计摄入 (kcal)'}</label><input type="number" value={fitnessValue} onChange={e=>setFitnessValue(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none transition-colors" placeholder="0"/></div>)}
+                            <div><label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择难度 (XP奖励)</label><div className="grid grid-cols-2 gap-3">{Object.entries(DIFFICULTIES).map(([key, cfg]) => (<button key={key} onClick={()=>setNewDiff(key)} className={`p-3 rounded-xl border-4 text-left transition-all relative overflow-hidden ${newDiff===key ? 'border-[#3DAA86] bg-white shadow-md' : 'border-transparent bg-white/50'}`}><div className={`absolute top-0 right-0 p-1 px-2 text-[10px] text-white font-bold rounded-bl-lg ${cfg.color}`}>{cfg.xp} XP</div><div className="font-bold text-[#59584D]">{cfg.label}</div><div className={`w-2 h-2 rounded-full mt-1 ${cfg.color}`}></div></button>))}</div></div>
                             <div className="nook-card border-l-8 border-yellow-400">
-                                <div className="flex items-center justify-between mb-2">
-                                    <label className="text-xs font-bold text-gray-500">关联金钱变动 (选填)</label>
-                                    <label className="nook-switch scale-75">
-                                        <input type="checkbox" checked={linkMoney} onChange={e=>setLinkMoney(e.target.checked)}/>
-                                        <span className="slider"></span>
-                                    </label>
-                                </div>
-                                {linkMoney && (
-                                    <div className="space-y-3 animate-pop">
-                                        <div className="flex bg-gray-100 p-1 rounded-lg">
-                                            <button onClick={()=>setMoneyType('income')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='income'?'bg-white text-green-600 shadow-sm':'text-gray-400'}`}>获得金钱</button>
-                                            <button onClick={()=>setMoneyType('expense')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='expense'?'bg-white text-red-500 shadow-sm':'text-gray-400'}`}>消耗金钱</button>
-                                        </div>
-                                        <div className="relative">
-                                            <input type="number" value={moneyAmount} onChange={e=>setMoneyAmount(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none focus:border-yellow-400 transition-colors" placeholder="0"/>
-                                            <div className="absolute right-0 top-2 text-[10px] font-bold text-gray-400">BELLS</div>
-                                        </div>
-                                        <p className="text-[10px] text-gray-400 text-center">完成任务时将自动记账并修改余额</p>
-                                    </div>
-                                )}
+                                <div className="flex items-center justify-between mb-2"><label className="text-xs font-bold text-gray-500">关联金钱变动 (选填)</label><label className="nook-switch scale-75"><input type="checkbox" checked={linkMoney} onChange={e=>setLinkMoney(e.target.checked)}/><span className="slider"></span></label></div>
+                                {linkMoney && (<div className="space-y-3 animate-pop"><div className="flex bg-gray-100 p-1 rounded-lg"><button onClick={()=>setMoneyType('income')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='income'?'bg-white text-green-600 shadow-sm':'text-gray-400'}`}>获得金钱</button><button onClick={()=>setMoneyType('expense')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='expense'?'bg-white text-red-500 shadow-sm':'text-gray-400'}`}>消耗金钱</button></div><div className="relative"><input type="number" value={moneyAmount} onChange={e=>setMoneyAmount(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none focus:border-yellow-400 transition-colors" placeholder="0"/><div className="absolute right-0 top-2 text-[10px] font-bold text-gray-400">BELLS</div></div></div>)}
                             </div>
                             <button onClick={handleAddTask} className="nook-btn w-full flex justify-center mt-4">发布任务</button>
                         </div>
@@ -859,25 +724,14 @@
             return (
                 <div className="flex flex-col flex-1 min-h-0 animate-pop">
                     <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-[#3DAA86] rounded-full flex items-center justify-center text-white shadow-md relative">
-                                <Icon path={Icons.Leaf} size={24}/>
-                                <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-yellow-900 text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white">{levelInfo.level}</div>
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-black opacity-80">集里游+</h2>
-                                <div className="w-24 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden"><div className="h-full bg-yellow-400 progress-bar-fill" style={{width: `${levelInfo.progress}%`}}></div></div>
-                                <div className="text-[10px] text-gray-400 font-bold mt-0.5">LV.{levelInfo.level} ({parseInt(levelInfo.currentXP)}/{levelInfo.requiredXP})</div>
-                            </div>
-                        </div>
+                        <div className="flex items-center gap-3"><div className="w-12 h-12 bg-[#3DAA86] rounded-full flex items-center justify-center text-white shadow-md relative"><Icon path={Icons.Leaf} size={24}/><div className="absolute -bottom-1 -right-1 bg-yellow-400 text-yellow-900 text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white">{levelInfo.level}</div></div><div><h2 className="text-lg font-black opacity-80">集里游+</h2><div className="w-24 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden"><div className="h-full bg-yellow-400 progress-bar-fill" style={{width: `${levelInfo.progress}%`}}></div></div><div className="text-[10px] text-gray-400 font-bold mt-0.5">LV.{levelInfo.level} ({parseInt(levelInfo.currentXP)}/{levelInfo.requiredXP})</div></div></div>
                         <button onClick={()=>setView('add')} className="w-8 h-8 bg-[#3DAA86] rounded-full flex items-center justify-center text-white shadow-md active:scale-95 transition"><Icon path={Icons.Plus} size={18}/></button>
                     </div>
-
                     <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
                         {tasks.map((t, idx) => {
                             const diff = DIFFICULTIES[t.difficulty || 'normal']; 
                             return (
-                                <div key={t.id} className={`bg-white rounded-2xl p-4 border-l-8 shadow-sm flex justify-between items-center anim-stagger-item ${t.completed ? 'border-gray-300 opacity-60' : 'border-[#F4A261]'}`} style={{animationDelay: idx * 0.05 + 's'}}>
+                                <div key={t.objectId || t.id} className={`bg-white rounded-2xl p-4 border-l-8 shadow-sm flex justify-between items-center anim-stagger-item ${t.completed ? 'border-gray-300 opacity-60' : 'border-[#F4A261]'}`} style={{animationDelay: idx * 0.05 + 's'}}>
                                     <div className="flex items-center gap-3">
                                         <div className={`w-3 h-3 rounded-full ${diff.color} shadow-sm ring-2 ${diff.ring}`}></div>
                                         <div>
@@ -890,24 +744,23 @@
                                             <div className="text-[10px] font-black text-[#38B2AC] bg-[#E6FFFA] px-1.5 py-0.5 rounded inline-block mt-1">{diff.label} +{t.reward} XP</div>
                                         </div>
                                     </div>
-                                    {t.completed ? <div className="text-[#3DAA86]"><Icon path={Icons.Leaf}/></div> : <button onClick={() => completeTask(t.id)} className="w-10 h-10 rounded-full border-4 border-[#E2E8F0] text-[#CBD5E0] flex items-center justify-center hover:bg-[#3DAA86] hover:text-white transition-colors"><Icon path={Icons.Check} size={20}/></button>}
+                                    {t.completed ? <div className="text-[#3DAA86]"><Icon path={Icons.Leaf}/></div> : <button onClick={() => onCompleteTask(t)} className="w-10 h-10 rounded-full border-4 border-[#E2E8F0] text-[#CBD5E0] flex items-center justify-center hover:bg-[#3DAA86] hover:text-white transition-colors"><Icon path={Icons.Check} size={20}/></button>}
                                 </div>
                             );
                         })}
-                        <div className="text-center text-xs opacity-50 py-4">更多任务将在第二天刷新...</div>
                     </div>
                 </div>
             );
         });
 
-        const SettingsApp = memo(({ user, currentTheme, currentAvatar, changeTheme, changeAvatar, onSave, onReset, onLogout, loading }) => (
+        const SettingsApp = memo(({ user, currentTheme, currentAvatar, changeTheme, changeAvatar, onReset, onLogout }) => (
             <div className="flex flex-col flex-1 min-h-0 animate-pop">
                 <div className="flex items-center gap-2 mb-6"><div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center text-white"><Icon path={Icons.Settings} /></div><h2 className="text-xl font-black opacity-80">设置</h2></div>
                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
                     <div className="nook-card border-l-8 border-[#3DAA86]">
                         <h3 className="font-bold text-[#59584D] mb-2">居民信息</h3>
                         <div className="flex items-center gap-3 mb-4"><div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-gray-400 overflow-hidden border-2 border-gray-100 shadow-sm"><img src={currentAvatar} alt="avatar" className="w-full h-full object-cover"/></div><div><div className="text-lg font-black text-[#59584D]">{user.getUsername()}</div><div className="text-xs text-gray-500 font-bold">已登录 NookLink</div></div></div>
-                        <div className="grid grid-cols-2 gap-2"><button onClick={onSave} disabled={loading} className="nook-btn text-sm flex justify-center items-center gap-2">{loading ? "保存中..." : <><Icon path={Icons.Cloud} size={16}/> 保存数据</>}</button><button onClick={onLogout} className="nook-btn-secondary py-3 px-4 rounded-full font-bold text-sm text-gray-600 flex justify-center items-center gap-2"><Icon path={Icons.LogOut} size={16}/> 退出</button></div>
+                        <div className="grid grid-cols-1 gap-2"><button onClick={onLogout} className="nook-btn-secondary py-3 px-4 rounded-full font-bold text-sm text-gray-600 flex justify-center items-center gap-2"><Icon path={Icons.LogOut} size={16}/> 退出</button></div>
                     </div>
                     <div className="nook-card">
                         <h3 className="font-bold text-[#59584D] mb-3">更换证件照</h3>
@@ -917,13 +770,7 @@
                         <h3 className="font-bold text-[#59584D] mb-3">更换手机壳</h3>
                         <div className="grid grid-cols-2 gap-3">{THEMES.map(t => (<button key={t.id} onClick={()=>changeTheme(t.id)} className={`p-3 rounded-xl border-4 transition-all flex items-center gap-2 text-left bg-gray-100 ${currentTheme === t.id ? 'border-[#3DAA86] bg-white shadow-md' : 'border-transparent'}`}><div className="w-6 h-6 rounded-full border border-white shadow-sm" style={{background: t.bg}}></div><span className="text-xs font-bold text-gray-600">{t.name}</span></button>))}</div>
                     </div>
-                    {/* 🟢 Data Reset Button */}
-                    <div className="pb-4">
-                        <button onClick={onReset} className="w-full py-4 rounded-3xl border-2 border-red-100 bg-red-50 text-red-500 font-black text-sm flex items-center justify-center gap-2 hover:bg-red-100 transition active:scale-95">
-                            <Icon path={Icons.Danger} size={18}/> 重置岛屿数据
-                        </button>
-                        <p className="text-center text-[10px] text-gray-400 mt-2">此操作将清空所有数据并无法恢复</p>
-                    </div>
+                    <div className="pb-4"><button onClick={onReset} className="w-full py-4 rounded-3xl border-2 border-red-100 bg-red-50 text-red-500 font-black text-sm flex items-center justify-center gap-2 hover:bg-red-100 transition active:scale-95"><Icon path={Icons.Danger} size={18}/> 重置岛屿数据</button><p className="text-center text-[10px] text-gray-400 mt-2">此操作将清空所有数据并无法恢复</p></div>
                 </div>
             </div>
         ));
@@ -947,40 +794,58 @@
         // --- Main App ---
         const App = () => {
             const [currentUser, setCurrentUser] = useState(null);
-            const [data, setData] = useState(null);
+            const [data, setData] = useState(DEFAULT_DATA);
             const [currentApp, setCurrentApp] = useState(null);
-            const [saveLoading, setSaveLoading] = useState(false);
-            const [isCheckingSession, setIsCheckingSession] = useState(true);
             const [isSaving, setIsSaving] = useState(false);
             const [resetStep, setResetStep] = useState(0); 
 
+            // Polling interval
             useEffect(() => {
-                const checkSession = async () => {
-                    const user = AV.User.current();
-                    if (user) {
-                        try {
-                            const cloudDataStr = user.get('gameData');
-                            let gameData = DEFAULT_DATA;
-                            if (cloudDataStr) {
-                                try { 
-                                    const parsed = JSON.parse(cloudDataStr);
-                                    gameData = { ...DEFAULT_DATA, ...parsed };
-                                    if (!gameData.ledger) gameData.ledger = [];
-                                    if (!gameData.stats.xp) gameData.stats.xp = gameData.stats.miles;
-                                    if (!gameData.fitness) gameData.fitness = DEFAULT_DATA.fitness;
-                                } catch(e){}
-                            }
-                            setCurrentUser(user);
-                            setData(gameData);
-                        } catch(e) { console.error("Auto login error", e); await AV.User.logOut(); }
-                    }
-                    setTimeout(() => setIsCheckingSession(false), 800);
-                };
-                checkSession();
+                if (!currentUser) return;
+                const interval = setInterval(async () => {
+                   await fetchData(currentUser);
+                }, 10000); // Poll every 10s
+                return () => clearInterval(interval);
+            }, [currentUser]);
+
+            const fetchData = async (user) => {
+                if (!user) return;
+                try {
+                    await user.fetch();
+                    const stats = user.get('stats') || DEFAULT_DATA.stats;
+                    const themeId = user.get('themeId') || DEFAULT_DATA.themeId;
+                    const avatar = user.get('avatar') || DEFAULT_DATA.avatar;
+                    const fitnessProfile = user.get('fitnessProfile');
+
+                    const taskQuery = new AV.Query('NookTask').equalTo('user', user).descending('createdAt');
+                    const tasks = (await taskQuery.find()).map(t => ({...t.attributes, objectId: t.id}));
+
+                    const ledgerQuery = new AV.Query('NookLedger').equalTo('user', user).descending('createdAt');
+                    const ledger = (await ledgerQuery.find()).map(l => ({...l.attributes, objectId: l.id}));
+
+                    const fitQuery = new AV.Query('NookFitness').equalTo('user', user).descending('createdAt');
+                    const fitLogs = (await fitQuery.find()).reduce((acc, log) => {
+                        acc[log.get('date')] = { ...log.attributes, records: log.get('records') || [] };
+                        return acc;
+                    }, {});
+
+                    setData({
+                        stats, themeId, avatar, tasks, ledger,
+                        fitness: { profile: fitnessProfile, logs: fitLogs }
+                    });
+                } catch (e) { console.error("Fetch error", e); }
+            };
+
+            useEffect(() => {
+                const user = AV.User.current();
+                if (user) {
+                    setCurrentUser(user);
+                    fetchData(user);
+                }
             }, []);
 
             useEffect(() => {
-                if (data && data.themeId) {
+                if (data.themeId) {
                     const t = THEMES.find(x => x.id === data.themeId) || THEMES[0];
                     const r = document.documentElement.style;
                     r.setProperty('--theme-bg', t.bg);
@@ -989,115 +854,192 @@
                     r.setProperty('--theme-btn-shadow', t.shadow);
                     r.setProperty('--theme-pattern', t.pattern);
                 }
-            }, [data]);
+            }, [data.themeId]);
 
-            // Auto Save
-            // 🟢 Changed from 2000ms to 500ms for faster sync
-            useEffect(() => {
-                if (!currentUser || !data) return;
-                const timer = setTimeout(async () => {
-                    setIsSaving(true);
-                    try {
-                        currentUser.set('gameData', JSON.stringify(data));
-                        await currentUser.save();
-                    } catch (error) { console.error("Save failed", error); } 
-                    finally { setIsSaving(false); }
-                }, 500); 
-                return () => clearTimeout(timer);
-            }, [data, currentUser]);
+            const handleLogin = (user) => { setCurrentUser(user); fetchData(user); };
+            const handleLogout = async () => { await AV.User.logOut(); setCurrentUser(null); setData(DEFAULT_DATA); setCurrentApp(null); };
 
-            const handleLogin = (user, gameData) => { setCurrentUser(user); setData(gameData); };
-            const handleLogout = async () => { await AV.User.logOut(); setCurrentUser(null); setData(null); setCurrentApp(null); };
-            const handleSave = async () => {
+            const saveStats = async (newStats) => {
                 if (!currentUser) return;
-                setSaveLoading(true);
-                try { currentUser.set('gameData', JSON.stringify(data)); await currentUser.save(); alert("保存成功！数据已同步到云端。"); } 
-                catch(e) { alert("保存失败: " + e.message); } 
-                finally { setSaveLoading(false); }
+                setIsSaving(true);
+                currentUser.set('stats', newStats);
+                await currentUser.save();
+                setData(prev => ({...prev, stats: newStats}));
+                setIsSaving(false);
+            };
+
+            const changeTheme = async (id) => {
+                if (!currentUser) return;
+                setIsSaving(true);
+                currentUser.set('themeId', id);
+                await currentUser.save();
+                setData(prev => ({...prev, themeId: id}));
+                setIsSaving(false);
+            };
+
+             const changeAvatar = async (url) => {
+                if (!currentUser) return;
+                setIsSaving(true);
+                currentUser.set('avatar', url);
+                await currentUser.save();
+                setData(prev => ({...prev, avatar: url}));
+                setIsSaving(false);
+            };
+
+            const addTask = async (taskData) => {
+                if (!currentUser) return;
+                setIsSaving(true);
+                const Task = AV.Object.extend('NookTask');
+                const t = new Task();
+                t.set('user', currentUser);
+                Object.keys(taskData).forEach(k => t.set(k, taskData[k]));
+                await t.save();
+                await fetchData(currentUser); // Refresh
+                setIsSaving(false);
+            };
+
+            const completeTaskAction = async (task) => {
+                if (!currentUser) return;
+                setIsSaving(true);
+                const t = AV.Object.createWithoutData('NookTask', task.objectId);
+                t.set('completed', true);
+                await t.save();
+                
+                // Rewards logic
+                let newStats = { ...data.stats, miles: data.stats.miles + task.reward, xp: (data.stats.xp || 0) + task.reward };
+                if (task.money) {
+                     if (task.money.type === 'income') newStats.pocket += task.money.amount;
+                     else newStats.pocket -= task.money.amount;
+                     await addLedger({type: task.money.type, amount: task.money.amount, category: '任务', note: task.title, date: new Date().toLocaleDateString()});
+                }
+                if (task.calories) {
+                    await addFitnessLog(task.type === '健身' ? 'exercise' : 'intake', task.calories, task.title);
+                }
+                await saveStats(newStats);
+                await fetchData(currentUser);
+                setIsSaving(false);
+            };
+
+            const addLedger = async (recordData) => {
+                if (!currentUser) return;
+                setIsSaving(true);
+                const Ledger = AV.Object.extend('NookLedger');
+                const l = new Ledger();
+                l.set('user', currentUser);
+                Object.keys(recordData).forEach(k => l.set(k, recordData[k]));
+                await l.save();
+                await fetchData(currentUser);
+                setIsSaving(false);
+            };
+            
+            const deleteLedger = async (id) => {
+                 if (!currentUser) return;
+                 setIsSaving(true);
+                 const l = AV.Object.createWithoutData('NookLedger', id);
+                 await l.destroy();
+                 await fetchData(currentUser);
+                 setIsSaving(false);
+            }
+
+            const updateFitnessProfile = async (profile) => {
+                if (!currentUser) return;
+                setIsSaving(true);
+                currentUser.set('fitnessProfile', profile);
+                await currentUser.save();
+                // Also ensure today's log has weight
+                const today = new Date().toLocaleDateString();
+                // We need to fetch or create today's log to update weight
+                // For simplicity, just refetch
+                await fetchData(currentUser);
+                setIsSaving(false);
+            };
+
+            const addFitnessLog = async (type, val, note) => {
+                if (!currentUser) return;
+                setIsSaving(true);
+                const today = new Date().toLocaleDateString();
+                const Fitness = AV.Object.extend('NookFitness');
+                
+                // Find today's log
+                const query = new AV.Query('NookFitness');
+                query.equalTo('user', currentUser);
+                query.equalTo('date', today);
+                let log = await query.first();
+
+                if (!log) {
+                    log = new Fitness();
+                    log.set('user', currentUser);
+                    log.set('date', today);
+                    log.set('exercise', 0);
+                    log.set('intake', 0);
+                    log.set('weight', data.fitness.profile?.weight || 0);
+                    log.set('records', []);
+                }
+
+                if (type === 'exercise') log.increment('exercise', val);
+                if (type === 'intake') log.increment('intake', val);
+                if (type === 'weight') {
+                    log.set('weight', val);
+                    // Also update profile
+                    currentUser.set('fitnessProfile', { ...data.fitness.profile, weight: val });
+                    await currentUser.save();
+                }
+
+                // Add record
+                if (type !== 'weight') {
+                     const rec = { id: Date.now(), type, val, note: note || (type==='exercise'?'手动':'饮食'), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+                     log.add('records', rec);
+                }
+
+                await log.save();
+                await fetchData(currentUser);
+                setIsSaving(false);
             };
 
             const handleReset = async () => {
                 if (!currentUser) return;
-                setSaveLoading(true);
+                if (!confirm("确定要删除所有数据吗？此操作不可逆！")) return;
+                setIsSaving(true);
                 try {
-                    const resetData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-                    setData(resetData);
-                    currentUser.set('gameData', JSON.stringify(resetData));
+                    // Delete all tasks
+                    const tasks = new AV.Query('NookTask').equalTo('user', currentUser);
+                    const tList = await tasks.find();
+                    await AV.Object.destroyAll(tList);
+                    
+                    // Delete all ledger
+                    const ledgers = new AV.Query('NookLedger').equalTo('user', currentUser);
+                    const lList = await ledgers.find();
+                    await AV.Object.destroyAll(lList);
+                    
+                    // Delete all fitness
+                    const fits = new AV.Query('NookFitness').equalTo('user', currentUser);
+                    const fList = await fits.find();
+                    await AV.Object.destroyAll(fList);
+
+                    // Reset user fields
+                    currentUser.set('stats', DEFAULT_DATA.stats);
+                    currentUser.set('themeId', 'nook');
+                    currentUser.set('fitnessProfile', null);
                     await currentUser.save();
-                    alert("重置成功！一切回到了最初的起点。");
-                    setResetStep(0);
-                } catch(e) { alert("重置失败: " + e.message); } 
-                finally { setSaveLoading(false); }
+                    
+                    alert("数据已重置");
+                    await fetchData(currentUser);
+                } catch(e) { alert(e.message); }
+                finally { setIsSaving(false); setResetStep(0); }
             };
 
-            const updateData = (key, val) => { setData(prev => ({ ...prev, [key]: val })); };
-            
-            const addLedgerRecord = (record) => {
-                setData(prev => ({ ...prev, ledger: [record, ...(prev.ledger || [])] }));
-            };
-
-            const addFitnessRecord = (type, val, note = '') => {
-                const today = new Date().toLocaleDateString();
-                const newLogs = { ...data.fitness.logs };
-                const currentWeight = data.fitness.profile?.weight || 0;
-                if (!newLogs[today]) newLogs[today] = { exercise: 0, intake: 0, weight: currentWeight, records: [] };
-                if (!newLogs[today].records) newLogs[today].records = []; 
-                if (type === 'exercise') newLogs[today].exercise += val;
-                if (type === 'intake') newLogs[today].intake += val;
-                newLogs[today].records.unshift({
-                    id: Date.now(),
-                    type,
-                    val,
-                    note: note || (type === 'exercise' ? '运动打卡' : '饮食记录'),
-                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                });
-                updateData('fitness', { ...data.fitness, logs: newLogs });
-            };
-            
             const AppIcon = ({ icon, label, onClick }) => (
                 <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={onClick}>
                     <div className="app-icon group-active:scale-90 transition-transform"><Icon path={icon} size={32} color="#59584D"/></div>
-                    {/* 🟢 Removed pill background for cleaner look */}
                     <span className="text-xs font-bold text-[#59584D] drop-shadow-sm">{label}</span>
                 </div>
             );
 
-            if (resetStep > 0) {
-                return (
-                     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-pop">
-                        <div className="nook-card w-full max-w-xs text-center border-4 border-red-500 shadow-2xl">
-                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500"><Icon path={Icons.Danger} size={32}/></div>
-                            <h2 className="text-xl font-black text-[#59584D] mb-2">{resetStep === 1 ? "确定要重置吗？" : "最后警告！"}</h2>
-                            <p className="text-sm text-gray-500 font-bold mb-6">{resetStep === 1 ? "所有数据将永久丢失，无法恢复。" : "此操作无法撤销！金钱、图鉴、健身记录都将消失！"}</p>
-                            <div className="space-y-3">
-                                <button onClick={() => resetStep === 1 ? setResetStep(2) : handleReset()} className="nook-btn w-full bg-red-500 text-white shadow-none hover:bg-red-600">{resetStep === 1 ? "确定" : "毁灭吧"}</button>
-                                <button onClick={() => setResetStep(0)} className="nook-btn-secondary w-full py-3 rounded-full font-bold text-sm">{resetStep === 1 ? "再想想" : "取消"}</button>
-                            </div>
-                        </div>
-                     </div>
-                );
-            }
-
-            if (isCheckingSession) {
-                return (
-                    <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#7FE2C3] animate-pop">
-                         <div className="w-24 h-24 bg-white rounded-[30px] flex items-center justify-center shadow-lg mb-4 animate-bounce"><Icon path={Icons.Leaf} size={60} color="#3DAA86"/></div>
-                        <div className="text-white/80 font-bold text-lg tracking-widest animate-pulse">NOOKLINK OS...</div>
-                    </div>
-                );
-            }
-
-            if (!currentUser || !data) return <AuthScreen onLogin={handleLogin} />;
+            if (!currentUser) return <AuthScreen onLogin={handleLogin} />;
 
             return (
                 <div className="w-full h-full flex flex-col items-center justify-center md:p-4 overflow-hidden">
-                    <div className={`
-                        w-full h-full 
-                        md:max-w-md md:h-[85vh] 
-                        md:rounded-[45px] md:border-[8px] md:border-white/40 md:shadow-2xl 
-                        bg-white/95
-                        relative overflow-hidden flex flex-col transition-all duration-500
-                    `}>
+                    <div className={`w-full h-full md:max-w-md md:h-[85vh] md:rounded-[45px] md:border-[8px] md:border-white/40 md:shadow-2xl bg-white/95 relative overflow-hidden flex flex-col transition-all duration-500`}>
                         <StatusBar isSaving={isSaving} />
 
                         <div className="flex-1 overflow-hidden relative p-4">
@@ -1114,36 +1056,48 @@
                                 {currentApp === 'miles' && <NookMilesApp 
                                     userStats={data.stats} 
                                     tasks={data.tasks} 
-                                    setTasks={(v)=>updateData('tasks', v)} 
-                                    updateStats={(v)=>updateData('stats', v)}
-                                    addLedgerRecord={addLedgerRecord}
-                                    addFitnessRecord={addFitnessRecord}
+                                    onAddTask={addTask}
+                                    onCompleteTask={completeTaskAction}
                                 />}
-                                {currentApp === 'ledger' && <LedgerApp ledger={data.ledger} setLedger={(v)=>updateData('ledger', v)}/>}
-                                {currentApp === 'fitness' && <FitnessApp fitness={data.fitness} updateFitness={(v)=>updateData('fitness', v)}/>}
+                                {currentApp === 'ledger' && <LedgerApp ledger={data.ledger} onAdd={addLedger} onDelete={deleteLedger}/>}
+                                {currentApp === 'fitness' && <FitnessApp fitness={data.fitness} updateFitness={(p)=>updateFitnessProfile(p.profile)} onSaveLog={addFitnessLog} onSaveProfile={updateFitnessProfile}/>}
                                 {currentApp === 'settings' && <SettingsApp 
                                     user={currentUser} 
                                     currentTheme={data.themeId} 
                                     currentAvatar={data.avatar}
-                                    changeTheme={(id)=>updateData('themeId', id)}
-                                    changeAvatar={(url)=>updateData('avatar', url)}
-                                    onSave={handleSave}
-                                    onLogout={handleLogout}
+                                    changeTheme={changeTheme}
+                                    changeAvatar={changeAvatar}
                                     onReset={()=>setResetStep(1)}
-                                    loading={saveLoading}
+                                    onLogout={handleLogout}
                                 />}
                                 {currentApp === 'passport' && <PassportApp user={currentUser} stats={data.stats} avatar={data.avatar}/>}
-                                {currentApp === 'finance' && <FinanceApp stats={data.stats} setStats={(newStats) => updateData('stats', newStats)}/>}
+                                {currentApp === 'finance' && <FinanceApp stats={data.stats} setStats={saveStats}/>}
                                 <div className="mt-auto pt-4 flex justify-center shrink-0">
                                     <button onClick={()=>setCurrentApp(null)} className="nook-btn-secondary px-6 py-2 rounded-full font-bold text-sm">返回桌面</button>
                                 </div>
                             </div>
                         </div>
+                        
+                        {/* Reset Dialog Overlay */}
+                         {resetStep > 0 && (
+                             <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-pop">
+                                <div className="nook-card w-full max-w-xs text-center border-4 border-red-500 shadow-2xl">
+                                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500"><Icon path={Icons.Danger} size={32}/></div>
+                                    <h2 className="text-xl font-black text-[#59584D] mb-2">{resetStep === 1 ? "确定要重置吗？" : "最后警告！"}</h2>
+                                    <p className="text-sm text-gray-500 font-bold mb-6">{resetStep === 1 ? "所有数据将永久丢失，无法恢复。" : "此操作无法撤销！金钱、图鉴、健身记录都将消失！"}</p>
+                                    <div className="space-y-3">
+                                        <button onClick={() => resetStep === 1 ? setResetStep(2) : handleReset()} className="nook-btn w-full bg-red-500 text-white shadow-none hover:bg-red-600">{resetStep === 1 ? "确定" : "毁灭吧"}</button>
+                                        <button onClick={() => setResetStep(0)} className="nook-btn-secondary w-full py-3 rounded-full font-bold text-sm">{resetStep === 1 ? "再想想" : "取消"}</button>
+                                    </div>
+                                </div>
+                             </div>
+                        )}
+
                         <div className="h-8 w-full flex justify-center items-center shrink-0 z-20 pb-2 pb-[calc(0.5rem+var(--safe-bottom))] md:pb-2">
                             <div className="w-1/3 h-1.5 bg-[#59584D]/20 rounded-full"></div>
                         </div>
                     </div>
-                    <div className="hidden md:block mt-4 text-white/80 font-bold text-xs tracking-widest opacity-80 uppercase">Nook Inc. OS v6.4 (Sync Fix)</div>
+                    <div className="hidden md:block mt-4 text-white/80 font-bold text-xs tracking-widest opacity-80 uppercase">Nook Inc. OS v7.0 (Cloud Native)</div>
                 </div>
             );
         };
