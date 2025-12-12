@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NookPhone OS - NookLink</title>
+    <title>NookPhone OS</title>
     
     <meta name="theme-color" content="#7FE2C3">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,7 +27,7 @@
             --theme-secondary: #FDFDF6;
             --theme-text: #59584D;
             --theme-btn-shadow: #2D8666;
-            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-top: env(safe-area-inset-top, 20px);
             --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
 
@@ -54,15 +54,16 @@
             transition: background-color 0.6s ease;
         }
 
-        /* Nook UI Elements */
+        /* 🟢 视觉还原：细腻的卡片阴影 */
         .nook-card {
             background-color: #FDFDF6;
             border-radius: 30px;
-            box-shadow: 0 8px 0 rgba(0,0,0,0.05), 0 12px 24px rgba(0,0,0,0.05); 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.05), 0 4px 0 rgba(0,0,0,0.02); 
             padding: 20px;
             position: relative;
         }
         
+        /* 🟢 视觉还原：按钮立体感 */
         .nook-btn {
             background-color: var(--theme-primary);
             color: white;
@@ -70,8 +71,8 @@
             padding: 12px 24px;
             border-radius: 999px;
             font-weight: 800;
-            box-shadow: 0 6px 0 var(--theme-btn-shadow);
-            transition: all 0.1s;
+            box-shadow: 0 6px 0 var(--theme-btn-shadow), 0 10px 10px rgba(0,0,0,0.1);
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             top: 0;
         }
@@ -95,6 +96,7 @@
             color: #59584D;
             outline: none;
             transition: all 0.2s;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
         }
         .nook-input:focus {
             background: #FFFFFF;
@@ -107,12 +109,14 @@
             border-radius: 22px;
             background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1), inset 0 2px 0 rgba(255,255,255,0.5);
+            transform: translateZ(0);
+            transition: transform 0.1s;
         }
-        .app-icon:active { transform: scale(0.95); }
+        .app-icon:active { transform: scale(0.9); }
 
         .animate-pop { animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes pop-in { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes pop-in { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -120,29 +124,10 @@
         .progress-bar-fill { transition: width 0.5s ease-out; }
         
         /* Toggle Switch */
-        .nook-switch {
-            position: relative;
-            display: inline-block;
-            width: 48px;
-            height: 28px;
-        }
+        .nook-switch { position: relative; display: inline-block; width: 48px; height: 28px; }
         .nook-switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute; cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        .slider:before {
-            position: absolute; content: "";
-            height: 20px; width: 20px;
-            left: 4px; bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .2s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .2s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         input:checked + .slider { background-color: #3DAA86; }
         input:checked + .slider:before { transform: translateX(20px); }
     </style>
@@ -151,7 +136,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef } = React;
+        const { useState, useEffect, useMemo, useRef, memo } = React;
         const AV = window.AV;
 
         // --- 配置区 ---
@@ -178,7 +163,7 @@
         	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E5%A8%83%E5%A8%832.jpg",
         	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E7%9C%BC%E9%95%9C%E7%BB%BF.jpg",
         	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E7%BB%BF.jpg",
-			"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E5%A8%83%E5%A8%833.jpg"
+        	"https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic1/%E5%A8%83%E5%A8%833.jpg"
         ];
 
         try {
@@ -192,6 +177,7 @@
                 {path}
             </svg>
         );
+        
         const Icons = {
             Leaf: <><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></>,
             User: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
@@ -218,13 +204,87 @@
             stats: { level: 1, miles: 500, pocket: 3000, savings: 50000, xp: 0 }, 
             tasks: [
                 { id: 1, title: '初次抵达', reward: 2, difficulty: 'simple', type: '生活', completed: false, money: {type: 'income', amount: 500} },
-                { id: 2, title: '向狸克问好', reward: 5, difficulty: 'normal', type: '工作', completed: false },
             ],
             themeId: 'nook',
             avatar: AVATAR_LIBRARY[0],
             ledger: [],
             fitness: { profile: null, logs: {} }
         };
+
+        const THEMES = [
+            { 
+                id: 'nook', 
+                name: 'Nook 经典', 
+                bg: '#7FE2C3', 
+                primary: '#3DAA86', 
+                text: '#59584D',
+                shadow: '#2D8666',
+                pattern: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40' fill='%23ffffff' fill-opacity='0.2' fill-rule='evenodd'/%3E%3C/svg%3E")`
+            },
+            { 
+                id: 'sakura', 
+                name: '樱花季', 
+                bg: '#FFC6D0', 
+                primary: '#FF7D9A', 
+                text: '#7A4A53',
+                shadow: '#D65D7A',
+                pattern: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='10' cy='10' r='4' fill='%23ffffff' fill-opacity='0.4'/%3E%3Ccircle cx='40' cy='40' r='3' fill='%23ffffff' fill-opacity='0.4'/%3E%3C/svg%3E")`
+            },
+            { 
+                id: 'summer', 
+                name: '夏日贝壳', 
+                bg: '#6AC4F6', 
+                primary: '#3490DC', 
+                text: '#2C5282',
+                shadow: '#2779BD',
+                pattern: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 10 Q5 0 10 10 T20 10' fill='none' stroke='%23ffffff' stroke-opacity='0.3' stroke-width='2'/%3E%3C/svg%3E")`
+            },
+            { 
+                id: 'autumn', 
+                name: '秋日落叶', 
+                bg: '#D68C45', 
+                primary: '#BC4B51', 
+                text: '#5A189A', 
+                shadow: '#9E2A2B', 
+                pattern: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20Z' fill='%23ffffff' fill-opacity='0.15'/%3E%3C/svg%3E")`
+            },
+            { 
+                id: 'starry', 
+                name: '傅达观星', 
+                bg: '#2C3E50', 
+                primary: '#F1C40F', 
+                text: '#ECF0F1', 
+                shadow: '#F39C12', 
+                pattern: `url("data:image/svg+xml,%3Csvg width='50' height='50' viewBox='0 0 50 50' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M25 0L30 15L45 20L30 25L25 40L20 25L5 20L20 15Z' fill='%23ffffff' fill-opacity='0.1'/%3E%3C/svg%3E")`
+            },
+            { 
+                id: 'mint', 
+                name: '薄荷苏打', 
+                bg: '#98FF98', 
+                primary: '#00A86B', 
+                text: '#004D40', 
+                shadow: '#00796B', 
+                pattern: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='10' height='10' fill='%23ffffff' fill-opacity='0.3'/%3E%3Crect x='10' y='10' width='10' height='10' fill='%23ffffff' fill-opacity='0.3'/%3E%3C/svg%3E")`
+            },
+            { 
+                id: 'dodo', 
+                name: 'DAL 航空', 
+                bg: '#2C5282', 
+                primary: '#ECC94B', 
+                text: '#ffffff', 
+                shadow: '#D69E2E', 
+                pattern: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E")`
+            },
+            { 
+                id: 'lavender', 
+                name: '薰衣草', 
+                bg: '#E6E6FA', 
+                primary: '#9370DB', 
+                text: '#4B0082', 
+                shadow: '#8A2BE2', 
+                pattern: `url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='15' cy='15' r='10' fill='none' stroke='%23ffffff' stroke-width='2' stroke-opacity='0.4'/%3E%3C/svg%3E")`
+            }
+        ];
 
         const DIFFICULTIES = {
             simple: { label: '简单', xp: 2, color: 'bg-green-400', ring: 'ring-green-200' },
@@ -241,6 +301,31 @@
             }
             return { level, currentXP: xp, requiredXP: level * 256, progress: (xp / (level * 256)) * 100 };
         };
+
+        const StatusBar = memo(({ isSaving }) => {
+            const [time, setTime] = useState(new Date());
+            useEffect(() => {
+                const timer = setInterval(() => setTime(new Date()), 1000);
+                return () => clearInterval(timer);
+            }, []);
+            
+            const formatTime = (date) => {
+                return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+            };
+
+            return (
+                <div className="h-12 flex justify-between items-center px-8 shrink-0 z-20 pt-2 text-[#59584D] pt-[calc(0.5rem+var(--safe-top))] md:pt-2">
+                    <div className="bg-white/40 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm shadow-sm">{formatTime(time)}</div>
+                    <div className="bg-white/40 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm shadow-sm flex items-center gap-1 transition-all">
+                        {isSaving ? (
+                            <><div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div> 🔄 同步中</>
+                        ) : (
+                            <><div className="w-2 h-2 bg-green-400 rounded-full"></div> ☁️ 已同步</>
+                        )}
+                    </div>
+                </div>
+            );
+        });
 
         const AuthScreen = ({ onLogin }) => {
             const [isRegister, setIsRegister] = useState(false);
@@ -285,7 +370,7 @@
                     <div className="mb-8 flex flex-col items-center">
                         <div className="w-24 h-24 bg-white rounded-[30px] flex items-center justify-center shadow-lg mb-4 transform rotate-3"><Icon path={Icons.Leaf} size={60} color="#3DAA86"/></div>
                         <h1 className="text-3xl font-black text-[#59584D] tracking-wide">NookLink</h1>
-                        <p className="text-[#3DAA86] font-bold text-sm bg-white/50 px-3 py-1 rounded-full mt-2 backdrop-blur-sm">{isRegister ? "居民登记处" : "欢迎回家"}</p>
+                        <p className="text-[#3DAA86] font-bold text-sm bg-white/50 px-3 py-1 rounded-full mt-2 shadow-sm backdrop-blur-md">{isRegister ? "居民登记处" : "欢迎回家"}</p>
                     </div>
                     <div className="nook-card w-full max-w-xs shadow-2xl border-[6px] border-white/40">
                         {error && <div className="bg-red-100 text-red-500 text-xs font-bold p-3 rounded-xl mb-4 text-center border-l-4 border-red-500">{error}</div>}
@@ -301,21 +386,12 @@
             );
         };
 
-        const THEMES = [
-            { id: 'nook', name: 'Nook 经典', bg: '#7FE2C3', primary: '#3DAA86', text: '#59584D' },
-            { id: 'sakura', name: '樱花季', bg: '#FFC6D0', primary: '#FF7D9A', text: '#7A4A53' },
-            { id: 'summer', name: '夏日贝壳', bg: '#6AC4F6', primary: '#3490DC', text: '#2C5282' },
-            { id: 'dodo', name: 'DAL 航空', bg: '#2C5282', primary: '#ECC94B', text: '#ffffff' }
-        ];
-
-        // --- 🟢 NookFit (Fitness App) ---
-        const FitnessApp = ({ fitness, updateFitness }) => {
+        const FitnessApp = memo(({ fitness, updateFitness }) => {
             const [view, setView] = useState('dashboard');
             const [profile, setProfile] = useState(fitness.profile || {});
             const [timeView, setTimeView] = useState('day'); 
             const [logType, setLogType] = useState('exercise'); 
             const [logValue, setLogValue] = useState('');
-
             const [pHeight, setPHeight] = useState(profile.height || '');
             const [pWeight, setPWeight] = useState(profile.weight || '');
             const [pAge, setPAge] = useState(profile.age || '');
@@ -328,52 +404,24 @@
                 const dates = [];
                 const now = new Date();
                 const numDays = timeView === 'week' ? 7 : (timeView === 'month' ? 30 : 1);
-                
                 for (let i = 0; i < numDays; i++) {
                     const d = new Date(now);
                     d.setDate(now.getDate() - i);
                     dates.push(d.toLocaleDateString());
                 }
-
-                let totalExercise = 0;
-                let totalIntake = 0;
-                let weightSum = 0;
-                let weightCount = 0;
-                let history = []; 
-
+                let totalExercise = 0; let totalIntake = 0; let weightSum = 0; let weightCount = 0; let history = []; 
                 dates.forEach(date => {
                     const log = fitness.logs[date];
                     if (log) {
-                        totalExercise += (log.exercise || 0);
-                        totalIntake += (log.intake || 0);
-                        if (log.weight) {
-                            weightSum += log.weight;
-                            weightCount++;
-                        }
-                        
+                        totalExercise += (log.exercise || 0); totalIntake += (log.intake || 0);
+                        if (log.weight) { weightSum += log.weight; weightCount++; }
                         if (timeView !== 'day' && (log.exercise > 0 || log.intake > 0)) {
-                            history.push({
-                                id: date,
-                                type: 'summary',
-                                date: date,
-                                exercise: log.exercise,
-                                intake: log.intake
-                            });
+                            history.push({ id: date, type: 'summary', date: date, exercise: log.exercise, intake: log.intake });
                         }
                     }
                 });
-
-                if (timeView === 'day') {
-                    history = todayLog.records || [];
-                }
-
-                let displayWeight = 0;
-                if (timeView === 'day') {
-                    displayWeight = todayLog.weight || profile.weight || 0;
-                } else {
-                    displayWeight = weightCount > 0 ? (weightSum / weightCount).toFixed(1) : (profile.weight || 0);
-                }
-
+                if (timeView === 'day') history = todayLog.records || [];
+                let displayWeight = timeView === 'day' ? (todayLog.weight || profile.weight || 0) : (weightCount > 0 ? (weightSum / weightCount).toFixed(1) : (profile.weight || 0));
                 return { totalExercise, totalIntake, displayWeight, history };
             }, [fitness.logs, timeView, profile, todayLog]);
 
@@ -397,11 +445,9 @@
                 if(!pHeight || !pWeight || !pAge) return alert("请完整填写信息");
                 const newProfile = { height: parseFloat(pHeight), weight: parseFloat(pWeight), age: parseInt(pAge), gender: pGender };
                 setProfile(newProfile);
-                
                 const newLogs = { ...fitness.logs };
                 if (!newLogs[today]) newLogs[today] = { exercise: 0, intake: 0, weight: parseFloat(pWeight), records: [] };
                 else newLogs[today].weight = parseFloat(pWeight);
-
                 updateFitness({ profile: newProfile, logs: newLogs });
                 setView('dashboard');
             };
@@ -412,7 +458,6 @@
                 const newLogs = { ...fitness.logs };
                 if (!newLogs[today]) newLogs[today] = { exercise: 0, intake: 0, weight: profile.weight || 0, records: [] };
                 if (!newLogs[today].records) newLogs[today].records = []; 
-
                 if (logType === 'exercise') newLogs[today].exercise += val;
                 if (logType === 'intake') newLogs[today].intake += val;
                 if (logType === 'weight') {
@@ -423,15 +468,7 @@
                     setLogValue(''); setView('dashboard');
                     return;
                 }
-
-                newLogs[today].records.unshift({
-                    id: Date.now(),
-                    type: logType,
-                    val: val,
-                    note: logType === 'exercise' ? '手动记录' : '手动记录',
-                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                });
-
+                newLogs[today].records.unshift({ id: Date.now(), type: logType, val: val, note: logType === 'exercise' ? '手动记录' : '手动记录', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
                 updateFitness({ ...fitness, logs: newLogs });
                 setLogValue(''); setView('dashboard');
             };
@@ -497,7 +534,6 @@
                 );
             }
 
-            // Dashboard View with History List and View Switcher
             return (
                 <div className="flex flex-col flex-1 min-h-0 animate-pop relative">
                     <div className="flex items-center justify-between mb-6">
@@ -508,7 +544,7 @@
                         <button onClick={()=>{ setPHeight(profile.height); setPWeight(profile.weight); setPAge(profile.age); setPGender(profile.gender); setView('setup');}} className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-500"><Icon path={Icons.Settings} size={16}/></button>
                     </div>
 
-                    <div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm">
+                    <div className="flex bg-white/40 p-1 rounded-xl mb-4 shadow-sm backdrop-blur-md">
                         <button onClick={()=>setTimeView('day')} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView==='day'?'bg-white text-[#4299E1] shadow-sm':'text-gray-500'}`}>日</button>
                         <button onClick={()=>setTimeView('week')} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView==='week'?'bg-white text-[#4299E1] shadow-sm':'text-gray-500'}`}>周</button>
                         <button onClick={()=>setTimeView('month')} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView==='month'?'bg-white text-[#4299E1] shadow-sm':'text-gray-500'}`}>月</button>
@@ -528,12 +564,11 @@
                         </div>
                     </div>
 
-                    {/* 🟢 FAB Button for Logging (Bottom Right) */}
-                    <button onClick={()=>setView('log')} className="absolute bottom-6 right-2 bg-[#4299E1] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#3182CE] transition active:scale-95 flex items-center gap-2 z-50 font-bold">
+                    <button onClick={()=>setView('log')} className="absolute bottom-[calc(1.5rem+var(--safe-bottom))] right-4 bg-[#4299E1] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#3182CE] transition active:scale-95 flex items-center gap-2 z-50 font-bold">
                         <Icon path={Icons.Plus} size={18}/> 记一笔
                     </button>
 
-                    <div className="flex-1 overflow-y-auto no-scrollbar pb-20"> {/* Increased padding bottom */}
+                    <div className="flex-1 overflow-y-auto no-scrollbar pb-20"> 
                         <div className="flex items-center gap-2 mb-2 px-2">
                             <div className="w-1 h-4 bg-gray-300 rounded-full"></div>
                             <h3 className="text-xs font-bold text-gray-400">{timeView === 'day' ? '今日记录' : '每日汇总'}</h3>
@@ -566,10 +601,10 @@
                     </div>
                 </div>
             );
-        };
+        });
 
-        // --- 🟢 Finance & Ledger Apps (Existing) ---
-        const FinanceApp = ({ stats, setStats }) => {
+        // --- Finance & Ledger Apps ---
+        const FinanceApp = memo(({ stats, setStats }) => {
             const [mode, setMode] = useState('transfer'); 
             const [amount, setAmount] = useState('');
             const [editPocket, setEditPocket] = useState(stats.pocket);
@@ -590,21 +625,21 @@
             };
 
             return (
-                <div className="flex flex-col flex-1 min-h-0 animate-pop text-[#59584D]">
-                     <div className="bg-[#E2E8F0] p-6 rounded-[30px] shadow-inner border-8 border-[#CBD5E0] mb-4 relative shrink-0">
+                <div className="flex flex-col flex-1 min-h-0 overflow-y-auto no-scrollbar animate-pop text-[#59584D] pb-4">
+                     <div className="bg-[#E2E8F0] p-6 rounded-[30px] shadow-sm border-8 border-[#CBD5E0] mb-4 relative shrink-0">
                         <button onClick={() => setMode(mode === 'transfer' ? 'manage' : 'transfer')} className={`absolute top-3 right-3 p-2 rounded-full transition-all ${mode==='manage' ? 'bg-[#3DAA86] text-white shadow-md' : 'text-gray-400 hover:bg-white/50'}`}><Icon path={Icons.Edit} size={16} /></button>
                         <div className="bg-[#2D3748] rounded-xl p-4 mb-4 text-[#48BB78] font-mono text-right shadow-inner border-4 border-[#1A202C]"><div className="text-xs opacity-50 mb-1 font-bold">ABD BALANCE</div><div className="text-3xl font-bold tracking-widest">{stats.savings.toLocaleString()}</div></div>
                         <div className="flex justify-between items-end"><div className="text-center"><div className="text-[10px] font-bold text-gray-500 mb-1">POCKET</div><div className="text-xl font-black text-[#D69E2E]">{stats.pocket.toLocaleString()}</div></div><div className="w-16 h-2 bg-gray-300 rounded-full mb-2"></div></div>
                      </div>
                      {mode === 'transfer' && (
-                         <div className="nook-card flex-1 flex flex-col justify-center gap-4 animate-pop">
+                         <div className="nook-card flex-1 flex flex-col justify-center gap-4 animate-pop pb-6">
                             <div className="text-center font-bold mb-2 text-sm opacity-80">欢迎使用 Nook 自动存取款机</div>
                             <div className="relative"><input type="number" placeholder="输入金额" value={amount} onChange={e=>setAmount(e.target.value)} className="w-full bg-[#F0F0F0] p-4 rounded-2xl text-center text-2xl font-black outline-none border-b-4 border-transparent focus:border-[#3DAA86] transition-colors placeholder-gray-300"/><div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">BELLS</div></div>
-                            <div className="grid grid-cols-2 gap-4 mt-2"><button onClick={()=>handleTrans('deposit')} className="nook-btn bg-[#48BB78] text-white py-4 shadow-[0_6px_0_#2F855A] active:shadow-none active:top-1.5 transition-all">存入</button><button onClick={()=>handleTrans('withdraw')} className="nook-btn bg-[#E53E3E] text-white py-4 shadow-[0_6px_0_#9B2C2C] active:shadow-none active:top-1.5 transition-all">取出</button></div>
+                            <div className="grid grid-cols-2 gap-4 mt-2"><button onClick={()=>handleTrans('deposit')} className="nook-btn bg-[#48BB78] text-white py-4 shadow-[0_4px_0_#2F855A] active:shadow-none active:top-1 transition-all">存入</button><button onClick={()=>handleTrans('withdraw')} className="nook-btn bg-[#E53E3E] text-white py-4 shadow-[0_4px_0_#9B2C2C] active:shadow-none active:top-1 transition-all">取出</button></div>
                          </div>
                      )}
                      {mode === 'manage' && (
-                         <div className="nook-card flex-1 flex flex-col gap-4 animate-pop border-l-8 border-[#3DAA86]">
+                         <div className="nook-card flex-1 flex flex-col gap-4 animate-pop border-l-8 border-[#3DAA86] pb-6">
                             <div className="text-center font-bold mb-2 text-sm opacity-80 flex items-center justify-center gap-2"><Icon path={Icons.Settings} size={16}/> 账户资金修正</div>
                             <div><label className="text-xs font-bold text-gray-400 block mb-1 ml-2">修改钱包金额 (POCKET)</label><div className="relative"><input type="number" value={editPocket} onChange={e=>setEditPocket(e.target.value)} className="w-full bg-[#FFFBEB] p-3 rounded-xl text-center text-xl font-bold outline-none border-2 border-transparent focus:border-[#D69E2E] text-[#D69E2E]"/></div></div>
                             <div><label className="text-xs font-bold text-gray-400 block mb-1 ml-2">修改存款金额 (ABD)</label><div className="relative"><input type="number" value={editSavings} onChange={e=>setEditSavings(e.target.value)} className="w-full bg-[#F0FFF4] p-3 rounded-xl text-center text-xl font-bold outline-none border-2 border-transparent focus:border-[#48BB78] text-[#48BB78]"/></div></div>
@@ -613,9 +648,9 @@
                      )}
                 </div>
             );
-        };
+        });
 
-        const LedgerApp = ({ ledger, setLedger }) => {
+        const LedgerApp = memo(({ ledger, setLedger }) => {
             const [view, setView] = useState('list'); 
             const [type, setType] = useState('expense');
             const [amount, setAmount] = useState('');
@@ -660,7 +695,6 @@
                 <div className="flex flex-col flex-1 min-h-0 animate-pop relative">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2"><div className="w-10 h-10 bg-[#FFD166] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Book} /></div><h2 className="text-xl font-black opacity-80">记账本</h2></div>
-                        {/* Old Button Removed */}
                     </div>
 
                     <div className="bg-[#3D405B] rounded-[24px] p-5 text-[#F4F1DE] shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0">
@@ -669,12 +703,11 @@
                         <div className="text-right space-y-1"><div><span className="text-[10px] bg-green-500/20 text-green-300 px-1.5 rounded mr-1">收</span><span className="text-sm font-bold">{summary.income.toLocaleString()}</span></div><div><span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 rounded mr-1">支</span><span className="text-sm font-bold">{summary.expense.toLocaleString()}</span></div></div>
                     </div>
                     
-                    {/* 🟢 FAB Button for Ledger */}
-                    <button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-50 font-bold">
+                    <button onClick={()=>setView('add')} className="absolute bottom-[calc(1.5rem+var(--safe-bottom))] right-4 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-50 font-bold">
                         <Icon path={Icons.Plus} size={18}/> 记一笔
                     </button>
 
-                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-20"> {/* Added padding bottom to clear FAB */}
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-20"> 
                         {ledger.length === 0 && <div className="text-center text-gray-400 py-10 text-xs font-bold">暂无记录，快去记一笔吧！</div>}
                         {ledger.map(item => (
                             <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group">
@@ -688,10 +721,10 @@
                     </div>
                 </div>
             );
-        };
+        });
 
-        // --- 🟢 NookMilesApp ---
-        const NookMilesApp = ({ userStats, tasks, setTasks, updateStats, addLedgerRecord, addFitnessRecord }) => {
+        // --- NookMilesApp ---
+        const NookMilesApp = memo(({ userStats, tasks, setTasks, updateStats, addLedgerRecord, addFitnessRecord }) => {
             const [view, setView] = useState('list');
             const [newTitle, setNewTitle] = useState('');
             const [newDiff, setNewDiff] = useState('normal');
@@ -742,7 +775,6 @@
                         addLedgerRecord(ledgerRecord);
                     }
                     
-                    // 🟢 Fitness Logic with Note
                     if (t.type === '健身' && t.calories) {
                         addFitnessRecord('exercise', t.calories, t.title);
                     }
@@ -869,9 +901,9 @@
                     </div>
                 </div>
             );
-        };
+        });
 
-        const SettingsApp = ({ user, currentTheme, currentAvatar, changeTheme, changeAvatar, onSave, onReset, onLogout, loading }) => (
+        const SettingsApp = memo(({ user, currentTheme, currentAvatar, changeTheme, changeAvatar, onSave, onReset, onLogout, loading }) => (
             <div className="flex flex-col flex-1 min-h-0 animate-pop">
                 <div className="flex items-center gap-2 mb-6"><div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center text-white"><Icon path={Icons.Settings} /></div><h2 className="text-xl font-black opacity-80">设置</h2></div>
                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
@@ -897,9 +929,9 @@
                     </div>
                 </div>
             </div>
-        );
+        ));
 
-        const PassportApp = ({ user, stats, avatar }) => {
+        const PassportApp = memo(({ user, stats, avatar }) => {
             const levelInfo = getLevelInfo(stats.xp || 0); 
             return (
                 <div className="flex flex-col flex-1 min-h-0 animate-pop">
@@ -913,7 +945,7 @@
                      <div className="nook-card flex-1 flex items-center justify-center text-center p-6"><div className="opacity-50"><div className="text-4xl mb-2">✈️</div><p className="font-bold">更多护照功能开发中...</p></div></div>
                 </div>
             );
-        };
+        });
 
         // --- Main App ---
         const App = () => {
@@ -923,18 +955,7 @@
             const [saveLoading, setSaveLoading] = useState(false);
             const [isCheckingSession, setIsCheckingSession] = useState(true);
             const [isSaving, setIsSaving] = useState(false);
-            
-            // 🟢 Reset Logic State
-            const [resetStep, setResetStep] = useState(0); // 0: idle, 1: confirm 1, 2: confirm 2
-            
-            // 🟢 Time State
-            const [currentTime, setCurrentTime] = useState(new Date());
-
-            // 🟢 Timer Effect
-            useEffect(() => {
-                const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-                return () => clearInterval(timer);
-            }, []);
+            const [resetStep, setResetStep] = useState(0); 
 
             useEffect(() => {
                 const checkSession = async () => {
@@ -949,7 +970,6 @@
                                     gameData = { ...DEFAULT_DATA, ...parsed };
                                     if (!gameData.ledger) gameData.ledger = [];
                                     if (!gameData.stats.xp) gameData.stats.xp = gameData.stats.miles;
-                                    // 🟢 New Fitness App Data Initialization
                                     if (!gameData.fitness) gameData.fitness = DEFAULT_DATA.fitness;
                                 } catch(e){}
                             }
@@ -969,27 +989,22 @@
                     r.setProperty('--theme-bg', t.bg);
                     r.setProperty('--theme-primary', t.primary);
                     r.setProperty('--theme-text', t.text);
-                    r.setProperty('--theme-btn-shadow', t.id==='sakura'?'#D65D7A':(t.id==='dodo'?'#D69E2E':'#2D8666'));
+                    r.setProperty('--theme-btn-shadow', t.shadow);
+                    r.setProperty('--theme-pattern', t.pattern);
                 }
             }, [data]);
 
-            // 🟢 Auto Save Effect
+            // Auto Save
             useEffect(() => {
                 if (!currentUser || !data) return;
-                
                 const timer = setTimeout(async () => {
                     setIsSaving(true);
                     try {
                         currentUser.set('gameData', JSON.stringify(data));
                         await currentUser.save();
-                        console.log("Auto-saved to cloud");
-                    } catch (error) {
-                        console.error("Save failed", error);
-                    } finally {
-                        setIsSaving(false);
-                    }
+                    } catch (error) { console.error("Save failed", error); } 
+                    finally { setIsSaving(false); }
                 }, 2000); 
-
                 return () => clearTimeout(timer);
             }, [data, currentUser]);
 
@@ -1003,48 +1018,34 @@
                 finally { setSaveLoading(false); }
             };
 
-            // 🟢 Reset Handler
             const handleReset = async () => {
                 if (!currentUser) return;
                 setSaveLoading(true);
                 try {
-                    // Deep copy default data to avoid reference issues
                     const resetData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-                    
-                    // Reset local
                     setData(resetData);
-                    // Reset cloud
                     currentUser.set('gameData', JSON.stringify(resetData));
                     await currentUser.save();
                     alert("重置成功！一切回到了最初的起点。");
-                    setResetStep(0); // Reset UI
-                } catch(e) {
-                    alert("重置失败: " + e.message);
-                } finally {
-                    setSaveLoading(false);
-                }
+                    setResetStep(0);
+                } catch(e) { alert("重置失败: " + e.message); } 
+                finally { setSaveLoading(false); }
             };
 
             const updateData = (key, val) => { setData(prev => ({ ...prev, [key]: val })); };
             
-            // 🟢 Ledger Helper
             const addLedgerRecord = (record) => {
                 setData(prev => ({ ...prev, ledger: [record, ...(prev.ledger || [])] }));
             };
 
-            // 🟢 Fitness Helper (Updated)
             const addFitnessRecord = (type, val, note = '') => {
                 const today = new Date().toLocaleDateString();
                 const newLogs = { ...data.fitness.logs };
                 const currentWeight = data.fitness.profile?.weight || 0;
-                
                 if (!newLogs[today]) newLogs[today] = { exercise: 0, intake: 0, weight: currentWeight, records: [] };
-                if (!newLogs[today].records) newLogs[today].records = []; // Ensure existence
-
+                if (!newLogs[today].records) newLogs[today].records = []; 
                 if (type === 'exercise') newLogs[today].exercise += val;
                 if (type === 'intake') newLogs[today].intake += val;
-                
-                // Add to history
                 newLogs[today].records.unshift({
                     id: Date.now(),
                     type,
@@ -1052,49 +1053,27 @@
                     note: note || (type === 'exercise' ? '运动打卡' : '饮食记录'),
                     time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                 });
-                
                 updateData('fitness', { ...data.fitness, logs: newLogs });
             };
             
-            const formatTime = (date) => {
-                return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-            };
-
             const AppIcon = ({ icon, label, onClick }) => (
                 <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={onClick}>
                     <div className="app-icon group-active:scale-90 transition-transform"><Icon path={icon} size={32} color="#59584D"/></div>
-                    <span className="text-xs font-bold bg-white/40 px-2 py-0.5 rounded-full text-[#59584D]">{label}</span>
+                    {/* 🟢 Removed pill background for cleaner look */}
+                    <span className="text-xs font-bold text-[#59584D] drop-shadow-sm">{label}</span>
                 </div>
             );
 
-            // 🟢 Reset Confirmation Dialog
             if (resetStep > 0) {
                 return (
                      <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-pop">
                         <div className="nook-card w-full max-w-xs text-center border-4 border-red-500 shadow-2xl">
-                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
-                                <Icon path={Icons.Danger} size={32}/>
-                            </div>
-                            <h2 className="text-xl font-black text-[#59584D] mb-2">
-                                {resetStep === 1 ? "确定要重置吗？" : "最后警告！"}
-                            </h2>
-                            <p className="text-sm text-gray-500 font-bold mb-6">
-                                {resetStep === 1 ? "所有数据将永久丢失，无法恢复。" : "此操作无法撤销！金钱、图鉴、健身记录都将消失！"}
-                            </p>
-                            
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500"><Icon path={Icons.Danger} size={32}/></div>
+                            <h2 className="text-xl font-black text-[#59584D] mb-2">{resetStep === 1 ? "确定要重置吗？" : "最后警告！"}</h2>
+                            <p className="text-sm text-gray-500 font-bold mb-6">{resetStep === 1 ? "所有数据将永久丢失，无法恢复。" : "此操作无法撤销！金钱、图鉴、健身记录都将消失！"}</p>
                             <div className="space-y-3">
-                                <button 
-                                    onClick={() => resetStep === 1 ? setResetStep(2) : handleReset()} 
-                                    className="nook-btn w-full bg-red-500 text-white shadow-none hover:bg-red-600"
-                                >
-                                    {resetStep === 1 ? "确定" : "毁灭吧"}
-                                </button>
-                                <button 
-                                    onClick={() => setResetStep(0)} 
-                                    className="nook-btn-secondary w-full py-3 rounded-full font-bold text-sm"
-                                >
-                                    {resetStep === 1 ? "再想想" : "取消"}
-                                </button>
+                                <button onClick={() => resetStep === 1 ? setResetStep(2) : handleReset()} className="nook-btn w-full bg-red-500 text-white shadow-none hover:bg-red-600">{resetStep === 1 ? "确定" : "毁灭吧"}</button>
+                                <button onClick={() => setResetStep(0)} className="nook-btn-secondary w-full py-3 rounded-full font-bold text-sm">{resetStep === 1 ? "再想想" : "取消"}</button>
                             </div>
                         </div>
                      </div>
@@ -1118,25 +1097,13 @@
                         w-full h-full 
                         md:max-w-md md:h-[85vh] 
                         md:rounded-[45px] md:border-[8px] md:border-white/40 md:shadow-2xl 
-                        bg-white/20 backdrop-blur-xl 
+                        bg-white/95
                         relative overflow-hidden flex flex-col transition-all duration-500
                     `}>
-                        <div className="h-12 flex justify-between items-center px-8 shrink-0 z-20 pt-2 text-[#59584D] pt-[calc(0.5rem+var(--safe-top))] md:pt-2">
-                            {/* 🟢 Update Time Display */}
-                            <div className="bg-white/40 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">{formatTime(currentTime)}</div>
-                            
-                            {/* 🟢 Status Bar Indicator */}
-                            <div className="bg-white/40 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm flex items-center gap-1 transition-all">
-                                {isSaving ? (
-                                    <><div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div> 🔄 同步中...</>
-                                ) : (
-                                    <><div className="w-2 h-2 bg-green-400 rounded-full"></div> ☁️ 已同步</>
-                                )}
-                            </div>
-                        </div>
+                        <StatusBar isSaving={isSaving} />
 
-                        <div className="flex-1 overflow-hidden relative p-6">
-                            <div className={`absolute inset-0 p-8 grid grid-cols-3 content-start gap-y-8 gap-x-4 transition-all duration-500 ${currentApp ? '-translate-x-full opacity-0' : 'translate-x-0 opacity-100'}`}>
+                        <div className="flex-1 overflow-hidden relative p-4">
+                            <div className={`absolute inset-0 p-4 grid grid-cols-3 content-start gap-y-8 gap-x-4 transition-all duration-500 ${currentApp ? '-translate-x-full opacity-0' : 'translate-x-0 opacity-100'}`}>
                                 <AppIcon icon={Icons.Leaf} label="集里游+" onClick={()=>setCurrentApp('miles')}/>
                                 <AppIcon icon={Icons.Book} label="记账本" onClick={()=>setCurrentApp('ledger')}/>
                                 <AppIcon icon={Icons.Activity} label="NookFit" onClick={()=>setCurrentApp('fitness')}/>
@@ -1145,7 +1112,7 @@
                                 <AppIcon icon={Icons.Settings} label="设置" onClick={()=>setCurrentApp('settings')}/>
                             </div>
 
-                            <div className={`absolute inset-0 p-6 bg-[#FDFDF6]/95 backdrop-blur-md md:rounded-[35px] transition-all duration-500 flex flex-col shadow-inner ${currentApp ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
+                            <div className={`absolute inset-0 p-4 bg-[#FDFDF6] transition-all duration-500 flex flex-col ${currentApp ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
                                 {currentApp === 'miles' && <NookMilesApp 
                                     userStats={data.stats} 
                                     tasks={data.tasks} 
@@ -1175,10 +1142,10 @@
                             </div>
                         </div>
                         <div className="h-8 w-full flex justify-center items-center shrink-0 z-20 pb-2 pb-[calc(0.5rem+var(--safe-bottom))] md:pb-2">
-                            <div className="w-1/3 h-1.5 bg-white/60 rounded-full"></div>
+                            <div className="w-1/3 h-1.5 bg-[#59584D]/20 rounded-full"></div>
                         </div>
                     </div>
-                    <div className="hidden md:block mt-4 text-white/80 font-bold text-xs tracking-widest opacity-80 uppercase">Nook Inc. OS v5.6 (Ledger FAB)</div>
+                    <div className="hidden md:block mt-4 text-white/80 font-bold text-xs tracking-widest opacity-80 uppercase">Nook Inc. OS v6.3 (Final Polish)</div>
                 </div>
             );
         };
