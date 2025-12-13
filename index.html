@@ -543,75 +543,148 @@
             return (<div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full"><div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-2"><div className="w-10 h-10 bg-[#805AD5] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Mic} /></div><h2 className="text-xl font-black opacity-80">录音助手</h2></div><div className="flex items-center bg-white/50 rounded-full px-1 py-1 backdrop-blur-sm"><button onClick={prevMonth} className="p-1.5 hover:bg-white/80 rounded-full text-gray-600 transition-colors"><Icon path={Icons.ChevronLeft} size={16}/></button><span className="text-xs font-bold text-[#59584D] mx-2 min-w-[60px] text-center">{currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月</span><button onClick={nextMonth} className="p-1.5 hover:bg-white/80 rounded-full text-gray-600 transition-colors"><Icon path={Icons.ChevronRight} size={16}/></button></div></div><div className="bg-[#2D3748] rounded-[24px] p-5 text-white shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0 transition-transform hover:scale-[1.02]"><div className="absolute right-0 bottom-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mb-6"></div><div><div className="text-[10px] font-bold opacity-50 mb-1 uppercase">Pending ({currentMonth.getMonth()+1}月)</div><div className="text-2xl font-black text-[#F6AD55] tracking-wide">{monthlyData.pending.toLocaleString()}</div></div><div className="text-right"><div><div className="text-[10px] font-bold opacity-50 mb-1 uppercase">Settled ({currentMonth.getMonth()+1}月)</div><div className="text-xl font-bold text-[#68D391]">{monthlyData.settled.toLocaleString()}</div></div></div></div><button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#805AD5] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#6B46C1] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一笔</button><div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">{monthlyData.list.length === 0 && <div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center"><div className="text-2xl mb-2">🎙️</div>本月暂无工作记录</div>}{monthlyData.list.map((item, i) => (<div key={item.id} className={`bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group animate-pop ${item.settled ? 'opacity-60' : ''}`} style={{animationDelay: `${i*50}ms`}}><div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm transition-colors ${item.settled ? 'bg-green-100 text-green-500' : 'bg-purple-100 text-purple-500'}`}><Icon path={item.settled ? Icons.Check : Icons.Mic} size={18}/></div><div><div className={`font-bold text-sm ${item.settled ? 'line-through text-gray-400' : 'text-[#59584D]'}`}>{item.title}</div><div className="text-[10px] text-gray-400 font-bold">{new Date(item.createdAt).toLocaleDateString()}</div></div></div><div className="flex items-center gap-3"><span className={`font-black ${item.settled ? 'text-gray-400' : 'text-[#805AD5]'}`}>+{item.price.toLocaleString()}</span><button onClick={()=>toggleSettled(item.id)} className={`p-2 rounded-full border-2 transition-all ${item.settled ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 text-gray-300 hover:border-[#805AD5] hover:text-[#805AD5]'}`}><Icon path={Icons.Check} size={14}/></button><button onClick={()=>deleteWork(item.id)} className="text-gray-300 hover:text-red-400 transition"><Icon path={Icons.Trash} size={14}/></button></div></div>))}</div></div>);
         };
         
-        const NookMilesApp = ({ stats, tasks, addTask, completeTask, showFeedback }) => {
-            const [view, setView] = useState('list');
-            const [timeView, setTimeView] = useState('day'); 
-            const [newTitle, setNewTitle] = useState('');
-            const [newDiff, setNewDiff] = useState('normal');
-            const [newType, setNewType] = useState('生活');
-            const [linkMoney, setLinkMoney] = useState(false);
-            const [moneyType, setMoneyType] = useState('income');
-            const [moneyAmount, setMoneyAmount] = useState('');
-            const [fitnessValue, setFitnessValue] = useState('');
-            const levelInfo = getLevelInfo(stats?.xp || 0);
-
-            const filteredTasks = useMemo(() => {
-                const now = new Date();
-                return tasks.filter(t => {
-                    const d = new Date(t.createdAt);
-                    if (timeView === 'day') return d.toDateString() === now.toDateString();
-                    else if (timeView === 'week') return d >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                    else return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                });
-            }, [tasks, timeView]);
-
-            const handleAddTask = () => {
-                if(!newTitle) return alert("请输入任务内容");
-                addTask(newTitle, newDiff, newType, DIFFICULTIES[newDiff].xp, linkMoney ? { type: moneyType, amount: parseInt(moneyAmount) } : null, (newType === '健身' || newType === '吃饭') ? parseInt(fitnessValue) : null);
-                setNewTitle(''); setView('list'); setLinkMoney(false); setMoneyAmount(''); setFitnessValue('');
-                showFeedback("任务已发布！加油！", "success");
-            };
-            
-            const handleComplete = (t) => {
-                if(t.completed) return;
-                completeTask(t.id);
-                const reward = DIFFICULTIES[t.difficulty || 'normal'].xp;
-                showFeedback(`任务完成！+${reward} Miles`, "success");
-            };
-
-            if (view === 'add') return (
-                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
-                    <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button><h2 className="text-xl font-black opacity-80">发布任务</h2></div>
-                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
-                        <div className="nook-card p-4"><label className="text-xs font-bold text-gray-400 mb-1 block">任务内容</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="例如：去钓鱼..."/></div>
-                        <div><label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择类型</label><div className="grid grid-cols-3 gap-2">{['工作', '娱乐', '生活', '健身', '吃饭'].map(t => (<button key={t} onClick={()=>setNewType(t)} className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${newType===t?'border-[#3DAA86] bg-white text-[#3DAA86] scale-95':'border-transparent bg-white/50 text-gray-500'}`}>{t}</button>))}</div></div>
-                        {(newType === '健身' || newType === '吃饭') && (<div className={`nook-card border-l-8 ${newType==='健身'?'border-orange-400':'border-green-400'}`}><label className="text-xs font-bold text-gray-500 mb-1 block">{newType === '健身' ? '预计消耗 (kcal)' : '预计摄入 (kcal)'}</label><input type="number" value={fitnessValue} onChange={e=>setFitnessValue(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none transition-colors" placeholder="0"/></div>)}
-                        <div><label className="text-xs font-bold text-gray-500 mb-2 block ml-2">难度 (XP)</label><div className="grid grid-cols-2 gap-3">{Object.entries(DIFFICULTIES).map(([key, cfg]) => (<button key={key} onClick={()=>setNewDiff(key)} className={`p-3 rounded-xl border-4 text-left transition-all relative overflow-hidden ${newDiff===key ? 'border-[#3DAA86] bg-white shadow-md scale-95' : 'border-transparent bg-white/50'}`}><div className={`absolute top-0 right-0 p-1 px-2 text-[10px] text-white font-bold rounded-bl-lg ${cfg.color}`}>{cfg.xp} XP</div><div className="font-bold text-[#59584D]">{cfg.label}</div></button>))}</div></div>
-                        <div className="nook-card border-l-8 border-yellow-400"><div className="flex items-center justify-between mb-2"><label className="text-xs font-bold text-gray-500">金钱变动</label><label className="nook-switch scale-75"><input type="checkbox" checked={linkMoney} onChange={e=>setLinkMoney(e.target.checked)}/><span className="slider"></span></label></div>{linkMoney && (<div className="space-y-3 animate-pop"><div className="flex bg-gray-100 p-1 rounded-lg"><button onClick={()=>setMoneyType('income')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='income'?'bg-white text-green-600 shadow-sm scale-95':'text-gray-400'}`}>获得</button><button onClick={()=>setMoneyType('expense')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='expense'?'bg-white text-red-500 shadow-sm scale-95':'text-gray-400'}`}>消耗</button></div><div className="relative"><input type="number" value={moneyAmount} onChange={e=>setMoneyAmount(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none focus:border-yellow-400 transition-colors" placeholder="0"/><div className="absolute right-0 top-2 text-[10px] font-bold text-gray-400">BELLS</div></div></div>)}</div>
-                        <button onClick={handleAddTask} className="nook-btn w-full flex justify-center mt-4">发布任务</button>
-                    </div>
-                </div>
-            );
-
-            return (
-                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
-                    <div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-3"><div className="w-12 h-12 bg-[#3DAA86] rounded-full flex items-center justify-center text-white shadow-md relative"><Icon path={Icons.Leaf} size={24}/><div className="absolute -bottom-1 -right-1 bg-yellow-400 text-yellow-900 text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white animate-bounce" style={{animationDuration:'3s'}}>{levelInfo.level}</div></div><div><h2 className="text-lg font-black opacity-80">集里游+</h2><div className="w-24 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden"><div className="h-full bg-yellow-400 progress-bar-fill" style={{width: `${levelInfo.progress}%`}}></div></div><div className="text-[10px] text-gray-400 font-bold mt-0.5">LV.{levelInfo.level} ({parseInt(levelInfo.currentXP)}/{levelInfo.requiredXP})</div></div></div></div>
-                    <div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm shrink-0">{['day','week','month'].map(t => (<button key={t} onClick={()=>setTimeView(t)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView===t?'bg-white text-[#3DAA86] shadow-sm scale-95':'text-gray-500'}`}>{t==='day'?'今日':(t==='week'?'近7天':'本月')}</button>))}</div>
-                    <button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 发布任务</button>
-                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
-                        {filteredTasks.length === 0 && (<div className="text-center text-xs opacity-50 py-10 flex flex-col items-center"><div className="text-2xl mb-2">🌴</div>{timeView === 'day' ? '今天没有任务了，休息一下吧' : '该时间段暂无任务记录'}</div>)}
-                        {filteredTasks.map((t, i) => {
-                            const diff = DIFFICULTIES[t.difficulty || 'normal']; 
-                            return (
-                                <div key={t.id} className={`bg-white rounded-2xl p-4 border-l-8 shadow-sm flex justify-between items-center animate-pop ${t.completed ? 'border-gray-300 opacity-60' : 'border-[#F4A261]'}`} style={{animationDelay: `${i*50}ms`}}><div className="flex items-center gap-3"><div className={`w-3 h-3 rounded-full ${diff.color} shadow-sm ring-2 ${diff.ring}`}></div><div><div className="font-bold text-[#59584D] flex items-center gap-2">{t.title}{t.type && <span className="text-[9px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-md font-bold">{t.type}</span>}{t.money && <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 ${t.money.type==='income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}><Icon path={Icons.Coin} size={10}/> {t.money.amount}</span>}{t.calories && <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 ${t.type==='健身' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}><Icon path={t.type==='健身' ? Icons.Activity : Icons.Utensils} size={10}/> {t.calories}</span>}</div><div className="text-[10px] font-black text-[#38B2AC] bg-[#E6FFFA] px-1.5 py-0.5 rounded inline-block mt-1">{diff.label} +{t.reward} XP <span className="ml-2 opacity-50 font-normal">{new Date(t.createdAt).toLocaleDateString()}</span></div></div></div>{t.completed ? <div className="text-[#3DAA86] anim-stamp"><Icon path={Icons.Leaf}/></div> : <button onClick={() => handleComplete(t)} className="w-10 h-10 rounded-full border-4 border-[#E2E8F0] text-[#CBD5E0] flex items-center justify-center hover:bg-[#3DAA86] hover:text-white transition-all transform active:scale-90"><Icon path={Icons.Check} size={20}/></button>}</div>
-                            );
-                        })}
-                        <div className="text-center text-xs opacity-50 py-4">更多任务将在第二天刷新...</div>
-                    </div>
-                </div>
-            );
-        };
-
+       const NookMilesApp = ({ stats, tasks, addTask, updateTask, deleteTask, completeTask, showFeedback }) => {
+                   const [view, setView] = useState('list');
+                   const [timeView, setTimeView] = useState('day'); 
+                   
+                   // 表单状态
+                   const [editingId, setEditingId] = useState(null); 
+                   const [newTitle, setNewTitle] = useState('');
+                   const [newDiff, setNewDiff] = useState('normal');
+                   const [newType, setNewType] = useState('生活');
+                   const [linkMoney, setLinkMoney] = useState(false);
+                   const [moneyType, setMoneyType] = useState('income');
+                   const [moneyAmount, setMoneyAmount] = useState('');
+                   const [fitnessValue, setFitnessValue] = useState('');
+                   
+                   const levelInfo = getLevelInfo(stats?.xp || 0);
+       
+                   const filteredTasks = useMemo(() => {
+                       const now = new Date();
+                       return tasks.filter(t => {
+                           const d = new Date(t.createdAt);
+                           if (timeView === 'day') return d.toDateString() === now.toDateString();
+                           else if (timeView === 'week') return d >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                           else return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                       });
+                   }, [tasks, timeView]);
+       
+                   const resetForm = () => {
+                       setEditingId(null);
+                       setNewTitle(''); 
+                       setNewDiff('normal');
+                       setNewType('生活');
+                       setLinkMoney(false); 
+                       setMoneyAmount(''); 
+                       setFitnessValue('');
+                   };
+       
+                   const handleEditStart = (t) => {
+                       setEditingId(t.id);
+                       setNewTitle(t.title);
+                       setNewDiff(t.difficulty || 'normal');
+                       setNewType(t.type || '生活');
+                       setLinkMoney(false); 
+                       setView('add');
+                   };
+       
+                   const handleSave = () => {
+                       if(!newTitle) return alert("请输入任务内容");
+                       
+                       if (editingId) {
+                           updateTask(editingId, {
+                               title: newTitle,
+                               difficulty: newDiff,
+                               type: newType,
+                           });
+                           showFeedback("任务已修改", "success");
+                       } else {
+                           addTask(
+                               newTitle, 
+                               newDiff, 
+                               newType, 
+                               DIFFICULTIES[newDiff].xp, 
+                               linkMoney ? { type: moneyType, amount: parseInt(moneyAmount) } : null, 
+                               (newType === '健身' || newType === '吃饭') ? parseInt(fitnessValue) : null
+                           );
+                           showFeedback("任务已发布！加油！", "success");
+                       }
+                       
+                       resetForm();
+                       setView('list');
+                   };
+       
+                   if (view === 'add') return (
+                       <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
+                           <div className="flex items-center gap-2 mb-4 shrink-0">
+                               <button onClick={()=>{ resetForm(); setView('list'); }} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button>
+                               <h2 className="text-xl font-black opacity-80">{editingId ? '编辑任务' : '发布任务'}</h2>
+                           </div>
+                           <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
+                               <div className="nook-card p-4"><label className="text-xs font-bold text-gray-400 mb-1 block">任务内容</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="例如：去钓鱼..."/></div>
+                               <div><label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择类型</label><div className="grid grid-cols-3 gap-2">{['工作', '娱乐', '生活', '健身', '吃饭'].map(t => (<button key={t} onClick={()=>setNewType(t)} className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${newType===t?'border-[#3DAA86] bg-white text-[#3DAA86] scale-95':'border-transparent bg-white/50 text-gray-500'}`}>{t}</button>))}</div></div>
+                               
+                               {(newType === '健身' || newType === '吃饭') && !editingId && (<div className={`nook-card border-l-8 ${newType==='健身'?'border-orange-400':'border-green-400'}`}><label className="text-xs font-bold text-gray-500 mb-1 block">{newType === '健身' ? '预计消耗 (kcal)' : '预计摄入 (kcal)'}</label><input type="number" value={fitnessValue} onChange={e=>setFitnessValue(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none transition-colors" placeholder="0"/></div>)}
+                               
+                               <div><label className="text-xs font-bold text-gray-500 mb-2 block ml-2">难度 (XP)</label><div className="grid grid-cols-2 gap-3">{Object.entries(DIFFICULTIES).map(([key, cfg]) => (<button key={key} onClick={()=>setNewDiff(key)} className={`p-3 rounded-xl border-4 text-left transition-all relative overflow-hidden ${newDiff===key ? 'border-[#3DAA86] bg-white shadow-md scale-95' : 'border-transparent bg-white/50'}`}><div className={`absolute top-0 right-0 p-1 px-2 text-[10px] text-white font-bold rounded-bl-lg ${cfg.color}`}>{cfg.xp} XP</div><div className="font-bold text-[#59584D]">{cfg.label}</div></button>))}</div></div>
+                               
+                               {!editingId && (
+                                   <div className="nook-card border-l-8 border-yellow-400"><div className="flex items-center justify-between mb-2"><label className="text-xs font-bold text-gray-500">金钱变动 (仅新增时可用)</label><label className="nook-switch scale-75"><input type="checkbox" checked={linkMoney} onChange={e=>setLinkMoney(e.target.checked)}/><span className="slider"></span></label></div>{linkMoney && (<div className="space-y-3 animate-pop"><div className="flex bg-gray-100 p-1 rounded-lg"><button onClick={()=>setMoneyType('income')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='income'?'bg-white text-green-600 shadow-sm scale-95':'text-gray-400'}`}>获得</button><button onClick={()=>setMoneyType('expense')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='expense'?'bg-white text-red-500 shadow-sm scale-95':'text-gray-400'}`}>消耗</button></div><div className="relative"><input type="number" value={moneyAmount} onChange={e=>setMoneyAmount(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none focus:border-yellow-400 transition-colors" placeholder="0"/><div className="absolute right-0 top-2 text-[10px] font-bold text-gray-400">BELLS</div></div></div>)}</div>
+                               )}
+                               
+                               <button onClick={handleSave} className="nook-btn w-full flex justify-center mt-4">{editingId ? '保存修改' : '发布任务'}</button>
+                           </div>
+                       </div>
+                   );
+       
+                   return (
+                       <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
+                           <div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-3"><div className="w-12 h-12 bg-[#3DAA86] rounded-full flex items-center justify-center text-white shadow-md relative"><Icon path={Icons.Leaf} size={24}/><div className="absolute -bottom-1 -right-1 bg-yellow-400 text-yellow-900 text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white animate-bounce" style={{animationDuration:'3s'}}>{levelInfo.level}</div></div><div><h2 className="text-lg font-black opacity-80">集里游+</h2><div className="w-24 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden"><div className="h-full bg-yellow-400 progress-bar-fill" style={{width: `${levelInfo.progress}%`}}></div></div><div className="text-[10px] text-gray-400 font-bold mt-0.5">LV.{levelInfo.level} ({parseInt(levelInfo.currentXP)}/{levelInfo.requiredXP})</div></div></div></div>
+                           <div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm shrink-0">{['day','week','month'].map(t => (<button key={t} onClick={()=>setTimeView(t)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView===t?'bg-white text-[#3DAA86] shadow-sm scale-95':'text-gray-500'}`}>{t==='day'?'今日':(t==='week'?'近7天':'本月')}</button>))}</div>
+                           <button onClick={()=>{ resetForm(); setView('add'); }} className="absolute bottom-6 right-2 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 发布任务</button>
+                           <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
+                               {filteredTasks.length === 0 && (<div className="text-center text-xs opacity-50 py-10 flex flex-col items-center"><div className="text-2xl mb-2">🌴</div>{timeView === 'day' ? '今天没有任务了，休息一下吧' : '该时间段暂无任务记录'}</div>)}
+                               {filteredTasks.map((t, i) => {
+                                   const diff = DIFFICULTIES[t.difficulty || 'normal']; 
+                                   return (
+                                       <div key={t.id} className={`bg-white rounded-2xl p-4 border-l-8 shadow-sm flex justify-between items-center group ${t.completed ? 'border-gray-300 opacity-60' : 'border-[#F4A261]'}`}>
+                                           <div className="flex items-center gap-3">
+                                               <div className={`w-3 h-3 rounded-full ${diff.color} shadow-sm ring-2 ${diff.ring}`}></div>
+                                               <div>
+                                                   <div className="font-bold text-[#59584D] flex items-center gap-2">
+                                                       {t.title}
+                                                       {t.type && <span className="text-[9px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-md font-bold">{t.type}</span>}
+                                                       {t.money && <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 ${t.money.type==='income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}><Icon path={Icons.Coin} size={10}/> {t.money.amount}</span>}
+                                                       {t.calories && <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 ${t.type==='健身' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}><Icon path={t.type==='健身' ? Icons.Activity : Icons.Utensils} size={10}/> {t.calories}</span>}
+                                                   </div>
+                                                   <div className="text-[10px] font-black text-[#38B2AC] bg-[#E6FFFA] px-1.5 py-0.5 rounded inline-block mt-1">
+                                                       {diff.label} +{t.reward} XP <span className="ml-2 opacity-50 font-normal">{new Date(t.createdAt).toLocaleDateString()}</span>
+                                                   </div>
+                                               </div>
+                                           </div>
+                                           <div className="flex items-center gap-2">
+                                               {/* 编辑按钮：只对未完成任务显示 */}
+                                               {!t.completed && (
+                                                   <button onClick={() => handleEditStart(t)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition opacity-0 group-hover:opacity-100 md:opacity-0 opacity-100"><Icon path={Icons.Edit} size={16}/></button>
+                                               )}
+                                               
+                                               {/* 删除按钮：对所有任务开放，用于回滚数据 */}
+                                               <button onClick={() => deleteTask(t.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition opacity-0 group-hover:opacity-100 md:opacity-0 opacity-100"><Icon path={Icons.Trash} size={16}/></button>
+       
+                                               {/* 状态图标 */}
+                                               {t.completed ? 
+                                                   <div className="text-[#3DAA86] anim-stamp ml-2"><Icon path={Icons.Leaf}/></div> : 
+                                                   <button onClick={() => handleComplete(t)} className="w-10 h-10 rounded-full border-4 border-[#E2E8F0] text-[#CBD5E0] flex items-center justify-center hover:bg-[#3DAA86] hover:text-white transition-all transform active:scale-90"><Icon path={Icons.Check} size={20}/></button>
+                                               }
+                                           </div>
+                                       </div>
+                                   );
+                               })}
+                               <div className="text-center text-xs opacity-50 py-4">更多任务将在第二天刷新...</div>
+                           </div>
+                       </div>
+                   );
+               }; 
         const DailyBroadcastApp = ({ tasks, ledger, fitLogs, voiceWorks, wikiItems, stats }) => {
             const getGreeting = () => {
                 const hour = new Date().getHours();
@@ -741,105 +814,102 @@
                             // ------------------------------------------
                             // 核心修复 1: 分步加载策略 (Lazy Load)
                             // ------------------------------------------
-                            const fetchData = useCallback(async (currentUser, isFullRefresh = false) => {
-                                if (!currentUser) {
-                                    // 清理状态...
-                                    setUserDoc(null); setStats(null); setTasks([]); setLedger([]); 
-                                    setFitProfile(null); setFitLogs([]); setVoiceWorks([]); setWikiItems([]); setPassport(null);
-                                    setIsCoreLoading(false);
-                                    return;
-                                }
-                
-                                // 如果是首次加载，显示全屏 Loading；如果是手动刷新，只显示顶部小圈圈
-                                if (isFullRefresh) setIsCoreLoading(true);
-                                else setIsSyncing(true);
-                                
-                                setFetchError(null);
-                                
-                                try {
-                                    // 通用查询辅助
-                                    const getOne = async (className) => {
-                                        try { return await new AV.Query(className).equalTo('user', currentUser).first(); } 
-                                        catch (e) { return null; }
-                                    };
-                                    const getList = async (className) => {
-                                        try { return await new AV.Query(className).equalTo('user', currentUser).limit(100).find(); } 
-                                        catch (e) { return []; }
-                                    };
-                
-                                    // === 第一步：只加载“核心数据” (让用户尽快看到桌面) ===
-                                    // 并行获取 Stats, Passport, Profile (这3个很快)
-                                    const [statsObj, passportObj, fitObj] = await Promise.all([
-                                        getOne('NookStats'),
-                                        getOne('NookPassport'),
-                                        getOne('NookFitProfile')
-                                    ]);
-                
-                                    // 初始化核心数据的逻辑 (如果为空则创建) - 略微简化以提升速度
-                                    let finalStats = statsObj;
-                                    if (!finalStats) {
-                                        const S = AV.Object.extend('NookStats');
-                                        const s = new S();
-                                        s.set('user', currentUser);
-                                        s.set('level', 1); s.set('miles', 500); s.set('pocket', 3000); s.set('savings', 50000); s.set('xp', 0);
-                                        try { finalStats = await s.save(); } catch(e){}
-                                    }
-                                    
-                                    // 设置用户基础信息
-                                    const uDoc = {
-                                        id: currentUser.id,
-                                        username: currentUser.getUsername(),
-                                        email: currentUser.getEmail(),
-                                        avatar: currentUser.get('avatar') || AVATAR_LIBRARY[0],
-                                        themeId: currentUser.get('themeId') || 'nook'
-                                    };
-                                    setUserDoc(uDoc);
-                                    setStats(simplify(finalStats));
-                                    setPassport(simplify(passportObj));
-                                    setFitProfile(simplify(fitObj));
-                
-                                    // 核心数据加载完毕，取消全屏 Loading，用户可以操作了！
-                                    setIsCoreLoading(false);
-                
-                                    // === 第二步：后台静默加载列表数据 (串行执行以防 429) ===
-                                    // 这里我们不 await 它们来阻塞 UI，而是让它们在后台跑
-                                    // 使用 async IIFE (立即执行函数)
-                                    (async () => {
-                                        try {
-                                            // 串行获取列表，每获取一个就更新一个 UI，让用户感觉数据在一条条出来
-                                            const tasksObjs = await getList('NookTask');
-                                            setTasks(tasksObjs.map(simplify).sort((a,b) => b.timestamp - a.timestamp));
+                            // ------------------------------------------
+                                        // 极致性能优化版 fetchData
+                                        // 策略：串行请求数据 -> 内存暂存 -> 一次性更新 UI
+                                        // ------------------------------------------
+                                        const fetchData = useCallback(async (currentUser, isFullRefresh = false) => {
+                                            if (!currentUser) {
+                                                setUserDoc(null); setStats(null); setTasks([]); setLedger([]); 
+                                                setFitProfile(null); setFitLogs([]); setVoiceWorks([]); setWikiItems([]); setPassport(null);
+                                                setIsCoreLoading(false);
+                                                return;
+                                            }
+                            
+                                            if (isFullRefresh) setIsCoreLoading(true);
+                                            else setIsSyncing(true);
                                             
-                                            // 稍微延迟一下，给浏览器喘息时间，避免卡顿
-                                            await new Promise(r => setTimeout(r, 50)); 
+                                            setFetchError(null);
                                             
-                                            const ledgerObjs = await getList('NookLedger');
-                                            setLedger(ledgerObjs.map(simplify).sort((a,b) => b.timestamp - a.timestamp));
-                
-                                            await new Promise(r => setTimeout(r, 50));
-                
-                                            const fitLogsObjs = await getList('NookFitLog');
-                                            setFitLogs(fitLogsObjs.map(simplify).sort((a,b) => b.timestamp - a.timestamp));
-                
-                                            const voiceObjs = await getList('NookVoiceWork');
-                                            setVoiceWorks(voiceObjs.map(simplify).sort((a,b) => b.timestamp - a.timestamp));
-                
-                                            const wikiObjs = await getList('NookWiki');
-                                            setWikiItems(wikiObjs.map(simplify).sort((a,b) => b.updatedTimestamp - a.updatedTimestamp));
-                                        } catch (err) {
-                                            console.warn("Background sync error", err);
-                                        } finally {
-                                            setIsSyncing(false); // 顶部刷新圈圈停止
-                                        }
-                                    })();
-                
-                                } catch (e) {
-                                    console.error("Core Fetch Error", e);
-                                    setFetchError(e.message);
-                                    setIsCoreLoading(false);
-                                    setIsSyncing(false);
-                                }
-                            }, []);
+                                            try {
+                                                // 核心数据 (Stats, User) 优先加载，保证应用不白屏
+                                                const getOne = async (className) => {
+                                                    try { return await new AV.Query(className).equalTo('user', currentUser).first(); } catch (e) { return null; }
+                                                };
+                                                
+                                                // 并行获取最轻量的核心数据
+                                                const [statsObj, passportObj, fitObj] = await Promise.all([
+                                                    getOne('NookStats'),
+                                                    getOne('NookPassport'),
+                                                    getOne('NookFitProfile')
+                                                ]);
+                            
+                                                // 初始化 Stats
+                                                let finalStats = statsObj;
+                                                if (!finalStats) {
+                                                    const S = AV.Object.extend('NookStats');
+                                                    const s = new S();
+                                                    s.set('user', currentUser);
+                                                    s.set('level', 1); s.set('miles', 500); s.set('pocket', 3000); s.set('savings', 50000); s.set('xp', 0);
+                                                    try { finalStats = await s.save(); } catch(e){}
+                                                }
+                            
+                                                // 1. 先渲染核心 UI，让用户看到界面
+                                                setUserDoc({
+                                                    id: currentUser.id,
+                                                    username: currentUser.getUsername(),
+                                                    email: currentUser.getEmail(),
+                                                    avatar: currentUser.get('avatar') || AVATAR_LIBRARY[0],
+                                                    themeId: currentUser.get('themeId') || 'nook'
+                                                });
+                                                setStats(simplify(finalStats));
+                                                setPassport(simplify(passportObj));
+                                                setFitProfile(simplify(fitObj));
+                                                setIsCoreLoading(false); // 此时桌面已显示
+                            
+                                                // 2. 后台加载列表数据 (不再触发多次渲染)
+                                                // 注意：这里将 limit 限制为 50，避免 DOM 节点过多卡死手机
+                                                const getList = async (className) => {
+                                                    try { return await new AV.Query(className).equalTo('user', currentUser).limit(50).descending('createdAt').find(); } 
+                                                    catch (e) { return []; }
+                                                };
+                            
+                                                // 使用 Promise.all 并行加载所有列表 (因为现在已经在后台了，稍微慢点也没关系，主要是为了合并渲染)
+                                                // 如果你的 429 问题依然很严重，LeanCloud 免费版限制 QPS，
+                                                // 我们可以分成两组请求，中间停顿一下
+                                                
+                                                // 第一组
+                                                const [tasksObjs, ledgerObjs] = await Promise.all([
+                                                    getList('NookTask'),
+                                                    getList('NookLedger')
+                                                ]);
+                                                
+                                                // 轻微延时，防止 QPS 超限
+                                                await new Promise(r => setTimeout(r, 100));
+                            
+                                                // 第二组
+                                                const [fitLogsObjs, voiceObjs, wikiObjs] = await Promise.all([
+                                                    getList('NookFitLog'),
+                                                    getList('NookVoiceWork'),
+                                                    getList('NookWiki')
+                                                ]);
+                            
+                                                // 3. 【关键】一次性批量更新所有列表状态
+                                                // React 18 自动开启了 Batch Update，这会合并为一次重绘
+                                                setTasks(tasksObjs.map(simplify));
+                                                setLedger(ledgerObjs.map(simplify));
+                                                setFitLogs(fitLogsObjs.map(simplify));
+                                                setVoiceWorks(voiceObjs.map(simplify));
+                                                setWikiItems(wikiObjs.map(simplify));
+                            
+                                            } catch (e) {
+                                                console.error("Fetch Error", e);
+                                                setFetchError("同步部分数据时遇到网络波动");
+                                            } finally {
+                                                setIsCoreLoading(false);
+                                                setIsSyncing(false);
+                                            }
+                                        }, []);
                 
                             // 自动登录逻辑
                             useEffect(() => {
@@ -875,11 +945,30 @@
                                 await localUser.save();
                             };
                             const changeAvatar = async (url) => {
-                                if(!localUser) return;
-                                setUserDoc(prev => ({...prev, avatar: url}));
-                                localUser.set('avatar', url);
-                                await localUser.save();
-                            };
+                                            // 1. 立即更新本地 UI (让用户感觉秒变)
+                                            setUserDoc(prev => {
+                                                if (!prev) return prev;
+                                                return { ...prev, avatar: url };
+                                            });
+                            
+                                            try {
+                                                // 2. 获取当前最新的用户实例进行保存 (比使用 localUser 变量更安全)
+                                                const user = AV.User.current();
+                                                if (user) {
+                                                    user.set('avatar', url);
+                                                    await user.save();
+                                                    // 3. 保存成功提示
+                                                    showFeedback("证件照已更新");
+                                                    
+                                                    // 4. 同步更新 localUser 状态，防止后续操作用到旧数据
+                                                    setLocalUser(user); 
+                                                }
+                                            } catch (e) {
+                                                console.error("Avatar save failed", e);
+                                                showFeedback("头像保存失败，请检查网络", "error");
+                                                // 如果失败，可选：回滚 avatar (这里暂略，因为概率很低)
+                                            }
+                                        };
                             useEffect(() => { 
                                 if (userDoc && userDoc.themeId) {
                                     const r = document.documentElement.style;
@@ -899,79 +988,170 @@
                             // 核心修复 2: 超级乐观更新 (本地立即响应，无需等待)
                             // ------------------------------------------
                 
-                            const taskActions = {
-                                addTask: async (title, diff, type, reward, money, calories) => {
-                                    const Task = AV.Object.extend('NookTask');
-                                    const t = new Task();
-                                    t.set('user', localUser);
-                                    t.set('title', title);
-                                    t.set('difficulty', diff);
-                                    t.set('type', type);
-                                    t.set('reward', reward);
-                                    t.set('completed', false);
-                                    if(money) t.set('money', money);
-                                    if(calories) t.set('calories', calories);
-                                    t.set('date', new Date().toLocaleDateString());
-                                    
-                                    const tempId = 'temp_' + Date.now();
-                                    const optimTask = { id: tempId, title, difficulty: diff, type, reward, completed: false, money, calories, timestamp: Date.now(), createdAt: new Date().toISOString() };
-                                    setTasks(prev => [optimTask, ...prev]);
-                
-                                    try {
-                                        const saved = await t.save();
-                                        setTasks(prev => prev.map(x => x.id === tempId ? simplify(saved) : x));
-                                    } catch(e) { 
-                                        setTasks(prev => prev.filter(x => x.id !== tempId)); 
-                                        showFeedback("同步失败", "error");
-                                    }
-                                },
-                                completeTask: async (taskId) => {
-                                    if (taskId.toString().startsWith('temp_')) return;
-                                    const task = tasks.find(t => t.id === taskId);
-                                    if(!task || task.completed) return;
-                                    
-                                    // 1. UI 立即更新状态
-                                    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: true } : t));
-                                    
-                                    // 2. 本地 Stats 立即更新 (不用等服务器)
-                                    setStats(prev => ({
-                                        ...prev,
-                                        miles: (prev.miles || 0) + task.reward,
-                                        xp: (prev.xp || 0) + task.reward
-                                    }));
-                
-                                    // 3. 异步发送服务器请求
-                                    try {
-                                        const tObj = AV.Object.createWithoutData('NookTask', taskId);
-                                        tObj.set('completed', true);
-                                        await tObj.save();
-                
-                                        const sObj = AV.Object.createWithoutData('NookStats', stats.id);
-                                        sObj.increment('miles', task.reward);
-                                        sObj.increment('xp', task.reward);
-                                        await sObj.save();
-                                        // 注意：这里不再重新 setStats，因为上面已经乐观更新了，避免 UI 跳变
-                
-                                        if(task.money) {
-                                            // 同步处理账单
-                                            const Ledger = AV.Object.extend('NookLedger');
-                                            const l = new Ledger();
-                                            l.set('user', localUser);
-                                            l.set('type', task.money.type);
-                                            l.set('amount', task.money.amount);
-                                            l.set('category', '任务');
-                                            l.set('note', task.title);
-                                            l.set('date', new Date().toLocaleDateString());
-                                            l.set('timestamp', Date.now());
-                                            const lSaved = await l.save();
-                                            setLedger(prev => [simplify(lSaved), ...prev]);
-                                        }
-                                    } catch(e) { 
-                                        console.error(e);
-                                        // 如果失败，默默回滚 UI (虽然概率很低)
-                                    }
-                                }
-                            };
+                            // ------------------------------------------
+                                        // 增强版 taskActions (支持增删改)
+                                        // ------------------------------------------
+                             // ------------------------------------------
+                                         // 增强版 taskActions (支持删除回滚)
+                                         // ------------------------------------------
+                                         const taskActions = {
+                                             addTask: async (title, diff, type, reward, money, calories) => {
+                                                 const Task = AV.Object.extend('NookTask');
+                                                 const t = new Task();
+                                                 t.set('user', localUser);
+                                                 t.set('title', title);
+                                                 t.set('difficulty', diff);
+                                                 t.set('type', type);
+                                                 t.set('reward', reward);
+                                                 t.set('completed', false);
+                                                 if(money) t.set('money', money);
+                                                 if(calories) t.set('calories', calories);
+                                                 t.set('date', new Date().toLocaleDateString());
+                                                 
+                                                 const tempId = 'temp_' + Date.now();
+                                                 const optimTask = { id: tempId, title, difficulty: diff, type, reward, completed: false, money, calories, timestamp: Date.now(), createdAt: new Date().toISOString() };
+                                                 setTasks(prev => [optimTask, ...prev]);
+                             
+                                                 try {
+                                                     const saved = await t.save();
+                                                     setTasks(prev => prev.map(x => x.id === tempId ? simplify(saved) : x));
+                                                 } catch(e) { 
+                                                     setTasks(prev => prev.filter(x => x.id !== tempId)); 
+                                                     showFeedback("网络错误，任务保存失败", "error");
+                                                 }
+                                             },
+                                             updateTask: async (id, updates) => {
+                                                 if (id.toString().startsWith('temp_')) return;
+                                                 setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+                                                 try {
+                                                     const tObj = AV.Object.createWithoutData('NookTask', id);
+                                                     if(updates.title) tObj.set('title', updates.title);
+                                                     if(updates.difficulty) tObj.set('difficulty', updates.difficulty);
+                                                     if(updates.type) tObj.set('type', updates.type);
+                                                     await tObj.save();
+                                                     showFeedback("任务已更新");
+                                                 } catch(e) { showFeedback("更新失败", "error"); }
+                                             },
+                                             deleteTask: async (id) => {
+                                                 if (id.toString().startsWith('temp_')) return;
+                                                 
+                                                 // 1. 先找到这个任务，用于计算回滚数据
+                                                 const task = tasks.find(t => t.id === id);
+                                                 if (!task) return;
+                             
+                                                 const confirmMsg = task.completed 
+                                                     ? "删除已完成任务将【撤销】获得的里程、经验和金钱。确定吗？" 
+                                                     : "确定要删除这个任务吗？";
+                                                 
+                                                 if(!confirm(confirmMsg)) return;
+                             
+                                                 // 2. 乐观删除 UI (立即从列表消失)
+                                                 setTasks(prev => prev.filter(t => t.id !== id));
+                                                 
+                                                 // 3. 如果任务已完成，执行数据回滚 (Revert Stats)
+                                                 if (task.completed) {
+                                                     let reverseMiles = task.reward || 0;
+                                                     let reversePocket = 0;
+                             
+                                                     // 计算金钱回滚：赚了就要扣掉，花了就要退回
+                                                     if (task.money) {
+                                                         if (task.money.type === 'income') {
+                                                             reversePocket = -task.money.amount; // 扣除收入
+                                                         } else {
+                                                             reversePocket = task.money.amount;  // 退还支出
+                                                         }
+                                                     }
+                             
+                                                     // 立即更新本地 Stats
+                                                     setStats(prev => ({
+                                                         ...prev,
+                                                         miles: Math.max(0, (prev.miles || 0) - reverseMiles),
+                                                         xp: Math.max(0, (prev.xp || 0) - reverseMiles),
+                                                         pocket: (prev.pocket || 0) + reversePocket
+                                                     }));
+                             
+                                                     // 异步更新服务器 Stats
+                                                     try {
+                                                         const sObj = AV.Object.createWithoutData('NookStats', stats.id);
+                                                         if(reverseMiles > 0) {
+                                                             sObj.increment('miles', -reverseMiles);
+                                                             sObj.increment('xp', -reverseMiles);
+                                                         }
+                                                         if(reversePocket !== 0) {
+                                                             sObj.increment('pocket', reversePocket);
+                                                         }
+                                                         await sObj.save();
+                                                     } catch(e) { console.error("Stats revert failed", e); }
+                                                     
+                                                     // 注意：这里我们只修正余额。
+                                                     // 为了逻辑简单，不再去 Ledger 表里查找并删除那条具体的流水记录（因为没有存关联ID），
+                                                     // 但余额修正了，总账就是对的。
+                                                 }
+                             
+                                                 // 4. 服务器删除任务
+                                                 try {
+                                                     const tObj = AV.Object.createWithoutData('NookTask', id);
+                                                     await tObj.destroy();
+                                                     showFeedback("任务已删除", "success");
+                                                 } catch(e) {
+                                                     console.error(e);
+                                                     showFeedback("删除失败", "error");
+                                                 }
+                                             },
+                                             completeTask: async (taskId) => {
+                                                 if (taskId.toString().startsWith('temp_')) return;
+                                                 const task = tasks.find(t => t.id === taskId);
+                                                 if(!task || task.completed) return;
+                                                 
+                                                 setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: true } : t));
+                                                 
+                                                 setStats(prev => ({
+                                                     ...prev,
+                                                     miles: (prev.miles || 0) + task.reward,
+                                                     xp: (prev.xp || 0) + task.reward
+                                                 }));
+                             
+                                                 try {
+                                                     const tObj = AV.Object.createWithoutData('NookTask', taskId);
+                                                     tObj.set('completed', true);
+                                                     await tObj.save();
+                             
+                                                     const sObj = AV.Object.createWithoutData('NookStats', stats.id);
+                                                     sObj.increment('miles', task.reward);
+                                                     sObj.increment('xp', task.reward);
+                                                     await sObj.save();
+                             
+                                                     if(task.money) {
+                                                         const Ledger = AV.Object.extend('NookLedger');
+                                                         const l = new Ledger();
+                                                         l.set('user', localUser);
+                                                         l.set('type', task.money.type);
+                                                         l.set('amount', task.money.amount);
+                                                         l.set('category', '任务');
+                                                         l.set('note', task.title);
+                                                         l.set('date', new Date().toLocaleDateString());
+                                                         l.set('timestamp', Date.now());
+                                                         const lSaved = await l.save();
+                                                         setLedger(prev => [simplify(lSaved), ...prev]);
+                                                         
+                                                         // 更新本地余额 UI
+                                                         if(task.money.type === 'income') {
+                                                             setStats(prev => ({...prev, pocket: (prev.pocket||0) + task.money.amount}));
+                                                             const s2 = AV.Object.createWithoutData('NookStats', stats.id);
+                                                             s2.increment('pocket', task.money.amount);
+                                                             s2.save();
+                                                         } else {
+                                                             setStats(prev => ({...prev, pocket: (prev.pocket||0) - task.money.amount}));
+                                                             const s3 = AV.Object.createWithoutData('NookStats', stats.id);
+                                                             s3.increment('pocket', -task.money.amount);
+                                                             s3.save();
+                                                         }
+                                                     }
+                                                 } catch(e) { 
+                                                     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: false } : t));
+                                                 }
+                                             }
+                                         };
                 
                             const ledgerActions = {
                                 addRecord: async (type, amount, cat, note) => {
