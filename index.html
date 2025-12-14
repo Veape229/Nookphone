@@ -172,6 +172,21 @@
         .anim-slide-out { animation: slide-out-left 0.3s ease-out forwards; }
 
         .nook-spinner { animation: spin-bounce 2s infinite ease-in-out; }
+		/* ... 其他动画 ... */
+		        
+		        .nook-spinner { animation: spin-bounce 2s infinite ease-in-out; }
+		        @keyframes spin-bounce {
+		            /* ... */
+		        }
+		
+		        /* 新增：缓慢浮动动画 */
+		        @keyframes float-slow {
+		            0%, 100% { transform: translateY(0); }
+		            50% { transform: translateY(-10px); }
+		        }
+		        .animate-float-slow { animation: float-slow 4s ease-in-out infinite; }
+		        
+		        /* ... 其他样式 ... */
         @keyframes spin-bounce {
             0% { transform: rotate(0deg) scale(1); }
             50% { transform: rotate(180deg) scale(1.2); }
@@ -427,25 +442,257 @@
             );
         };
 
-        // ... (WikiApp, FitnessApp, FinanceApp, LedgerApp, VoiceWorkApp, NookMilesApp, DailyBroadcastApp, PassportApp, SettingsApp 组件 - 与之前相同，但确保使用了 simplify)
-        const WikiApp = ({ items, add, update, remove, showFeedback }) => {
-            const [view, setView] = useState('list');
-            const [search, setSearch] = useState('');
-            const [draft, setDraft] = useState({ id: null, title: '', content: '' });
-            const filteredItems = useMemo(() => {
-                if (!search) return items;
-                const lowerSearch = search.toLowerCase();
-                return items.filter(i => i.title.toLowerCase().includes(lowerSearch) || i.content.toLowerCase().includes(lowerSearch));
-            }, [items, search]);
-            const handleSave = () => {
-                if (!draft.title.trim()) return alert("请输入标题");
-                if (draft.id) { update(draft.id, draft.title, draft.content); } else { add(draft.title, draft.content); }
-                setView('list');
-            };
-            const handleDelete = (id) => { if(confirm("删除此记录？")) { remove(id); setView('list'); } };
-            if (view === 'edit') return (<div className="flex flex-col flex-1 min-h-0 screen-enter h-full"><div className="flex items-center justify-between mb-4 shrink-0"><button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button><h2 className="text-xl font-black opacity-80">{draft.id ? '编辑' : '新建'}</h2>{draft.id && <button onClick={()=>handleDelete(draft.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-full"><Icon path={Icons.Trash} size={20}/></button>}</div><div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4"><div className="nook-card p-4"><label className="text-xs font-bold text-gray-400 mb-1 block">标题</label><input value={draft.title} onChange={e=>setDraft({...draft, title: e.target.value})} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2"/></div><div className="nook-card p-4 flex-1 flex flex-col min-h-[200px]"><label className="text-xs font-bold text-gray-400 mb-2 block">内容</label><textarea value={draft.content} onChange={e=>setDraft({...draft, content: e.target.value})} className="w-full flex-1 bg-transparent outline-none resize-none text-sm font-medium leading-relaxed text-[#59584D]"/></div><button onClick={handleSave} className="nook-btn w-full mt-2 bg-[#667EEA] shadow-[0_5px_0_#5A67D8]">保存</button></div></div>);
-            return (<div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full"><div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-2"><div className="w-10 h-10 bg-[#667EEA] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Bookmark} /></div><h2 className="text-xl font-black opacity-80">Nook小知识</h2></div></div><div className="bg-white/60 p-2 rounded-2xl mb-4 flex items-center gap-2 backdrop-blur-sm shadow-inner shrink-0"><Icon path={Icons.Search} size={18} className="text-gray-400 ml-2"/><input value={search} onChange={e=>setSearch(e.target.value)} className="bg-transparent w-full outline-none text-sm font-bold text-[#59584D]" placeholder="搜索..."/></div><button onClick={()=>{setDraft({ id: null, title: '', content: '' }); setView('edit');}} className="absolute bottom-6 right-2 bg-[#667EEA] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#5A67D8] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一条</button><div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">{filteredItems.length === 0 && <div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center"><div className="text-2xl mb-2">🔖</div>暂无记录</div>}{filteredItems.map((item, i) => (<div key={item.id} onClick={()=>{setDraft(item); setView('edit');}} className="bg-white rounded-2xl p-4 border-l-8 border-[#667EEA] shadow-sm cursor-pointer hover:bg-blue-50 transition-colors animate-pop group" style={{animationDelay: `${i*50}ms`}}><div className="flex justify-between items-start mb-1"><h3 className="font-bold text-[#59584D]">{item.title}</h3></div><p className="text-xs text-gray-500 line-clamp-2">{item.content}</p></div>))}</div></div>);
-        };
+        // ==========================================
+                // Nook Wiki App (带图片上传功能版)
+                // ==========================================
+                        // Nook Wiki App (列表 -> 详情 -> 编辑 模式)
+                        // ==========================================
+                        const WikiApp = ({ items, add, update, remove, showFeedback }) => {
+                            const [view, setView] = useState('list'); // 'list' | 'detail' | 'edit'
+                            const [search, setSearch] = useState('');
+                            
+                            // draft 用于存储当前操作的数据（无论是查看、编辑还是新建）
+                            const [draft, setDraft] = useState({ id: null, title: '', content: '', image: null });
+                            
+                            // 文件上传相关状态
+                            const [file, setFile] = useState(null); 
+                            const [preview, setPreview] = useState(null); 
+                            const [isUploading, setIsUploading] = useState(false); 
+                            const fileInputRef = useRef(null);
+                
+                            const filteredItems = useMemo(() => {
+                                if (!search) return items;
+                                const lowerSearch = search.toLowerCase();
+                                return items.filter(i => i.title.toLowerCase().includes(lowerSearch) || i.content.toLowerCase().includes(lowerSearch));
+                            }, [items, search]);
+                
+                            // ============ 辅助函数 ============
+                
+                            const handleFileChange = (e) => {
+                                const selectedFile = e.target.files[0];
+                                if (selectedFile) {
+                                    if (!selectedFile.type.startsWith('image/')) return alert('请选择图片文件');
+                                    setFile(selectedFile);
+                                    setPreview(URL.createObjectURL(selectedFile)); 
+                                }
+                            };
+                
+                            const handleRemoveImage = (e) => {
+                                e && e.stopPropagation();
+                                setFile(null);
+                                setPreview(null);
+                                setDraft(prev => ({ ...prev, image: null })); 
+                                if (fileInputRef.current) fileInputRef.current.value = '';
+                            };
+                
+                            const handleSave = async () => {
+                                if (!draft.title.trim()) return alert("请输入标题");
+                                setIsUploading(true);
+                                try {
+                                    if (draft.id) { 
+                                        await update(draft.id, draft.title, draft.content, file, draft.image); 
+                                    } else { 
+                                        await add(draft.title, draft.content, file); 
+                                    }
+                                    setView('list'); // 保存后返回列表
+                                } catch (e) {
+                                    console.error(e);
+                                    showFeedback("保存失败", "error");
+                                } finally {
+                                    setIsUploading(false);
+                                }
+                            };
+                
+                            const handleDelete = (id) => { 
+                                if(confirm("删除此记录？")) { 
+                                    remove(id); 
+                                    setView('list'); 
+                                } 
+                            };
+                
+                            // ============ 视图切换逻辑 ============
+                
+                            // 1. 点击列表项 -> 进入详情页
+                            const handleViewDetail = (item) => {
+                                setDraft(item);
+                                setView('detail');
+                            };
+                
+                            // 2. 点击“记一条” -> 进入编辑页（新建）
+                            const handleCreate = () => {
+                                setDraft({ id: null, title: '', content: '', image: null }); 
+                                setPreview(null); 
+                                setFile(null);
+                                if (fileInputRef.current) fileInputRef.current.value = '';
+                                setView('edit');
+                            };
+                
+                            // 3. 在详情页点击“编辑” -> 进入编辑页（修改）
+                            const handleEditFromDetail = () => {
+                                // 将 draft 中的图片设为预览状态
+                                setPreview(draft.image || null);
+                                setFile(null);
+                                setView('edit');
+                            };
+                
+                            useEffect(() => {
+                                return () => { if (file && preview) URL.revokeObjectURL(preview); };
+                            }, [file, preview]);
+                
+                
+                            // ================= 视图 1: 详情页 (Detail) =================
+                            if (view === 'detail') return (
+                                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
+                                    {/* 顶部导航 */}
+                                    <div className="flex items-center justify-between mb-4 shrink-0">
+                                        <button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+                                            <Icon path={Icons.ArrowLeft} size={24}/>
+                                        </button>
+                                        <h2 className="text-xl font-black opacity-80">查看详情</h2>
+                                        {/* 详情页右上角的删除按钮 */}
+                                        <button onClick={()=>handleDelete(draft.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
+                                            <Icon path={Icons.Trash} size={20}/>
+                                        </button>
+                                    </div>
+                
+                                    <div className="flex-1 overflow-y-auto no-scrollbar pb-20 animate-pop">
+                                        {/* 大图展示区 */}
+                                        {draft.image ? (
+                                            <div className="w-full rounded-2xl overflow-hidden shadow-sm mb-6 border-4 border-white bg-gray-100 relative group">
+                                                <img 
+                                                    src={draft.image} 
+                                                    alt="detail" 
+                                                    className="w-full h-auto object-contain max-h-[400px]" 
+                                                    onClick={() => window.open(draft.image, '_blank')} // 点击在新窗口打开原图
+                                                />
+                                                <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-md pointer-events-none">
+                                                    点击查看原图
+                                                </div>
+                                            </div>
+                                        ) : null}
+                
+                                        {/* 标题与内容 */}
+                                        <div className="px-2">
+                                            <h1 className="text-2xl font-black text-[#59584D] mb-2 leading-tight">{draft.title}</h1>
+                                            <div className="text-xs font-bold text-gray-300 mb-6 flex items-center gap-2">
+                                                <Icon path={Icons.Leaf} size={12}/>
+                                                {new Date(draft.updatedTimestamp || draft.timestamp || Date.now()).toLocaleString()}
+                                            </div>
+                                            <div className="text-sm font-medium text-[#59584D] leading-7 whitespace-pre-wrap select-text">
+                                                {draft.content || "（没有填写内容）"}
+                                            </div>
+                                        </div>
+                                    </div>
+                
+                                    {/* 底部悬浮编辑按钮 */}
+                                    <div className="absolute bottom-6 left-0 right-0 flex justify-center z-30">
+                                        <button 
+                                            onClick={handleEditFromDetail} 
+                                            className="bg-[#667EEA] text-white px-8 py-3 rounded-full shadow-xl hover:bg-[#5A67D8] transition active:scale-95 flex items-center gap-2 font-bold animate-pop"
+                                        >
+                                            <Icon path={Icons.Edit} size={18}/> 编辑内容
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                
+                
+                            // ================= 视图 2: 编辑页 (Edit) =================
+                            if (view === 'edit') return (
+                                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
+                                    <div className="flex items-center justify-between mb-4 shrink-0">
+                                        {/* 如果是从新建进来，返回列表；如果是从详情进来，返回详情 */}
+                                        <button onClick={()=>setView(draft.id ? 'detail' : 'list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+                                            <Icon path={Icons.ArrowLeft} size={24}/>
+                                        </button>
+                                        <h2 className="text-xl font-black opacity-80">{draft.id ? '编辑记录' : '新记录'}</h2>
+                                        <div className="w-10"></div> {/* 占位，保持标题居中 */}
+                                    </div>
+                                    
+                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
+                                        <div className="nook-card p-4">
+                                            <label className="text-xs font-bold text-gray-400 mb-1 block">标题</label>
+                                            <input value={draft.title} onChange={e=>setDraft({...draft, title: e.target.value})} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2 placeholder-gray-300" placeholder="输入标题..."/>
+                                        </div>
+                
+                                        {/* 图片上传 */}
+                                        <div className="nook-card p-4">
+                                            <label className="text-xs font-bold text-gray-400 mb-2 block">配图 (可选)</label>
+                                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" hidden />
+                                            
+                                            {preview ? (
+                                                <div className="relative rounded-2xl overflow-hidden border-2 border-gray-100 animate-pop group">
+                                                    <img src={preview} alt="preview" className="w-full max-h-[200px] object-cover bg-gray-50" />
+                                                    <button onClick={handleRemoveImage} className="absolute top-3 right-3 bg-black/40 text-white p-2 rounded-full backdrop-blur-md hover:bg-red-500 transition-all shadow-sm">
+                                                        <Icon path={Icons.Trash} size={18}/>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button onClick={() => fileInputRef.current.click()} className="w-full h-32 border-3 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-[#667EEA] hover:text-[#667EEA] hover:bg-[#667EEA]/5 transition-all gap-2">
+                                                    <Icon path={Icons.Plus} size={24}/>
+                                                    <span className="text-xs font-bold">点击上传图片</span>
+                                                </button>
+                                            )}
+                                        </div>
+                
+                                        <div className="nook-card p-4 flex-1 flex flex-col min-h-[150px]">
+                                            <label className="text-xs font-bold text-gray-400 mb-2 block">内容</label>
+                                            <textarea value={draft.content} onChange={e=>setDraft({...draft, content: e.target.value})} className="w-full flex-1 bg-transparent outline-none resize-none text-sm font-medium leading-relaxed text-[#59584D] min-h-[100px] placeholder-gray-300" placeholder="记录一点想法..."/>
+                                        </div>
+                                        
+                                        <button onClick={handleSave} disabled={isUploading} className={`nook-btn w-full mt-2 bg-[#667EEA] shadow-[0_5px_0_#5A67D8] flex items-center justify-center gap-2 ${isUploading ? 'opacity-70 cursor-wait' : ''}`}>
+                                            {isUploading ? (
+                                                <>
+                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                    <span>保存中...</span>
+                                                </>
+                                            ) : "保存"}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                
+                            // ================= 视图 3: 列表页 (List) =================
+                            return (
+                                <div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full">
+                                    <div className="flex items-center justify-between mb-4 shrink-0">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-10 h-10 bg-[#667EEA] rounded-full flex items-center justify-center text-white shadow-sm"><Icon path={Icons.Bookmark} /></div>
+                                            <h2 className="text-xl font-black opacity-80">Nook小知识</h2>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white/60 p-2 rounded-2xl mb-4 flex items-center gap-2 backdrop-blur-sm shadow-inner shrink-0">
+                                        <Icon path={Icons.Search} size={18} className="text-gray-400 ml-2"/>
+                                        <input value={search} onChange={e=>setSearch(e.target.value)} className="bg-transparent w-full outline-none text-sm font-bold text-[#59584D] placeholder-gray-300" placeholder="搜索知识..."/>
+                                    </div>
+                                    
+                                    {/* 列表页右下角按钮：新建（进入 Edit 视图） */}
+                                    <button onClick={handleCreate} className="absolute bottom-6 right-2 bg-[#667EEA] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#5A67D8] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop">
+                                        <Icon path={Icons.Plus} size={18}/> 记一条
+                                    </button>
+                                    
+                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
+                                        {filteredItems.length === 0 && <div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center gap-2"><div className="text-4xl grayscale opacity-50">📖</div>暂无记录</div>}
+                                        {filteredItems.map((item, i) => (
+                                            // 点击列表项 -> 进入 Detail 视图
+                                            <div key={item.id} onClick={()=>handleViewDetail(item)} className="bg-white rounded-2xl p-4 border-l-8 border-[#667EEA] shadow-sm cursor-pointer hover:bg-indigo-50/50 transition-all animate-pop group flex gap-4 relative overflow-hidden" style={{animationDelay: `${i*50}ms`}}>
+                                                <div className="flex-1 min-w-0 z-10">
+                                                    <div className="flex justify-between items-start mb-2"><h3 className="font-bold text-[#59584D] truncate text-base">{item.title}</h3></div>
+                                                    <p className="text-xs text-gray-500 line-clamp-2 font-medium leading-relaxed">{item.content}</p>
+                                                    <div className="text-[10px] text-gray-300 font-bold mt-2">{new Date(item.updatedTimestamp || item.timestamp).toLocaleDateString()}</div>
+                                                </div>
+                                                {item.image && (
+                                                    <div className="w-20 h-20 rounded-xl bg-gray-200 overflow-hidden shrink-0 border-2 border-white shadow-sm relative z-10 group-hover:scale-105 transition-transform">
+                                                        <img src={item.image} alt="thumb" className="w-full h-full object-cover" loading="lazy" />
+                                                    </div>
+                                                )}
+                                                <Icon path={Icons.Bookmark} size={80} className="absolute -right-4 -bottom-6 text-[#667EEA] opacity-5 z-0 pointer-events-none transform -rotate-12 group-hover:rotate-0 transition-all"/>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        };
 
         const FitnessApp = ({ profile, logs, updateProfile, addLog, user, showFeedback }) => {
             const [view, setView] = useState('dashboard');
@@ -709,121 +956,113 @@
             );
         };
         // ==========================================
-        // Nook Shopping 组件
-        // ==========================================
-        const ShoppingApp = ({ items, addItem, toggleItem, deleteItem, showFeedback }) => {
-            const [tab, setTab] = useState('daily'); // 'daily' (补货) | 'wish' (心愿)
-            const [name, setName] = useState('');
-            const [price, setPrice] = useState('');
-        
-            // 过滤当前列表
-            const filtered = items.filter(i => i.type === tab);
-            // 计算心愿单总额（仅计算未完成的）
-            const totalWish = items.filter(i => i.type === 'wish' && !i.checked).reduce((acc, cur) => acc + (cur.price || 0), 0);
-        
-            const handleAdd = () => {
-                if (!name.trim()) return;
-                addItem(name, price, tab);
-                setName(''); 
-                setPrice('');
-                showFeedback(tab === 'daily' ? "已加入补货清单" : "已加入心愿单");
-            };
-        
-            return (
-                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
-                    {/* 顶部标题栏 */}
-                    <div className="flex items-center justify-between mb-4 shrink-0">
-                        <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-[#F6E05E] rounded-full flex items-center justify-center text-white shadow-md border-2 border-white">
-                                <Icon path={Icons.ShoppingBag} size={20} className="text-[#975A16]" /> 
-                            </div>
-                            <h2 className="text-xl font-black opacity-80">Nook 购物</h2>
-                        </div>
-                    </div>
-        
-                    {/* 选项卡切换 */}
-                    <div className="flex bg-white/50 p-1 rounded-xl mb-4 shrink-0 backdrop-blur-sm">
-                        <button onClick={() => setTab('daily')} className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-2 ${tab === 'daily' ? 'bg-white text-[#D69E2E] shadow-sm' : 'text-gray-500'}`}>
-                            <span>🥕</span> 日常补货
-                        </button>
-                        <button onClick={() => setTab('wish')} className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-2 ${tab === 'wish' ? 'bg-white text-purple-500 shadow-sm' : 'text-gray-500'}`}>
-                            <span>🎁</span> 心愿清单
-                        </button>
-                    </div>
-        
-                    {/* 心愿单总额统计 */}
-                    {tab === 'wish' && (
-                        <div className="nook-card bg-gradient-to-r from-purple-50 to-white border-l-8 border-purple-300 mb-4 py-3 px-4 flex justify-between items-center animate-pop">
-                            <div className="text-xs font-bold text-purple-400">所需铃钱总额</div>
-                            <div className="text-xl font-black text-purple-600 flex items-center gap-1">
-                                <Icon path={Icons.Coin} size={16}/> {totalWish.toLocaleString()}
-                            </div>
-                        </div>
-                    )}
-        
-                    {/* 输入区域 */}
-                    <div className="flex gap-2 mb-4 shrink-0 items-center bg-white/60 p-2 rounded-2xl shadow-sm backdrop-blur-md">
-                        <input 
-                            value={name} 
-                            onChange={e => setName(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                            className="flex-[2] bg-transparent outline-none font-bold text-[#59584D] px-2 text-sm placeholder-gray-400" 
-                            placeholder={tab === 'daily' ? "牛奶, 鸡蛋, 纸巾..." : "Switch, 键盘..."}
-                        />
-                        {tab === 'wish' && (
-                            <>
-                                <div className="w-px h-6 bg-gray-300"></div>
-                                <input 
-                                    type="number"
-                                    value={price} 
-                                    onChange={e => setPrice(e.target.value)}
-                                    className="flex-1 bg-transparent outline-none font-bold text-[#59584D] px-2 text-sm text-center w-20 placeholder-gray-400" 
-                                    placeholder="价格"
-                                />
-                            </>
-                        )}
-                        <button onClick={handleAdd} className="bg-[#F6E05E] text-[#975A16] rounded-xl w-10 h-10 flex items-center justify-center font-black shadow-sm active:scale-90 transition-transform hover:bg-[#FAF089]">
-                            <Icon path={Icons.Plus} size={20}/>
-                        </button>
-                    </div>
-        
-                    {/* 列表区域 */}
-                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-20">
-                        {filtered.length === 0 && (
-                            <div className="text-center text-gray-400 py-12 text-xs font-bold opacity-60 flex flex-col items-center gap-2">
-                                <div className="text-3xl grayscale opacity-50">{tab === 'daily' ? '🛒' : '✨'}</div>
-                                {tab === 'daily' ? '家里物资充足，无需补货' : '暂无心愿，知足常乐'}
-                            </div>
-                        )}
-                        {filtered.map((item, i) => (
-                            <div key={item.id} className={`flex items-center justify-between p-3 pl-4 bg-white rounded-2xl shadow-sm border-l-[6px] transition-all animate-pop group ${item.checked ? 'opacity-50 grayscale bg-gray-50 border-gray-200' : (tab==='daily'?'border-[#F6E05E]':'border-purple-300')}`} style={{animationDelay: `${i*30}ms`}}>
-                                <div className="flex items-center gap-3 overflow-hidden flex-1 cursor-pointer" onClick={() => toggleItem(item.id)}>
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${item.checked ? 'bg-gray-400 border-gray-400' : 'border-gray-300 bg-white group-hover:border-[#3DAA86]'}`}>
-                                        {item.checked && <Icon path={Icons.Check} size={12} className="text-white"/>}
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className={`font-bold text-sm truncate transition-all ${item.checked ? 'line-through text-gray-400' : 'text-[#59584D]'}`}>
-                                            {item.name}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 shrink-0">
-                                    {item.type === 'wish' && (
-                                        <span className={`text-xs font-black px-2 py-1 rounded-lg ${item.checked ? 'bg-gray-200 text-gray-500' : 'bg-purple-100 text-purple-600'}`}>
-                                            {Number(item.price).toLocaleString()}
-                                        </span>
-                                    )}
-                                    <button onClick={(e) => {e.stopPropagation(); deleteItem(item.id);}} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-full transition-colors">
-                                        <Icon path={Icons.Trash} size={16}/>
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-		// ==========================================
+ // ==========================================
+         // Nook Shopping 组件 (内置 SVG 头像版 - 100%显示)
+         // ==========================================
+         const ShoppingApp = ({ items, addItem, toggleItem, deleteItem, showFeedback }) => {
+             const [tab, setTab] = useState('daily'); 
+             const [name, setName] = useState('');
+             const [price, setPrice] = useState('');
+         
+             const filtered = items.filter(i => i.type === tab);
+             const totalWish = items.filter(i => i.type === 'wish' && !i.checked).reduce((acc, cur) => acc + (cur.price || 0), 0);
+         
+             const handleAdd = () => {
+                 if (!name.trim()) return;
+                 addItem(name, price, tab);
+                 setName(''); setPrice('');
+                 showFeedback(tab === 'daily' ? "已加入补货清单" : "已加入心愿单");
+             };
+ 
+             // 使用 SVG Data URI 直接绘制豆狸，无需外部链接，永不失效
+             const raccoonSVG = (color) => `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23B87C4C'/%3E%3Cpath d='M15 45 Q30 65 50 55 Q70 65 85 45 Q95 35 85 25 Q70 30 50 25 Q30 30 15 25 Q5 35 15 45' fill='%235D4037'/%3E%3Ccircle cx='35' cy='42' r='8' fill='white'/%3E%3Ccircle cx='35' cy='42' r='4' fill='black'/%3E%3Ccircle cx='65' cy='42' r='8' fill='white'/%3E%3Ccircle cx='65' cy='42' r='4' fill='black'/%3E%3Ccircle cx='50' cy='60' r='5' fill='%233E2723'/%3E%3Cpath d='M10 20 L30 15 L25 35 Z' fill='%235D4037'/%3E%3Cpath d='M90 20 L70 15 L75 35 Z' fill='%235D4037'/%3E%3Cpath d='M20 70 Q50 90 80 70' stroke='${color}' stroke-width='10' fill='none' stroke-linecap='round'/%3E%3C/svg%3E`;
+             
+             // 旗帜 SVG
+             const flagSVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cline x1='5' y1='50' x2='5' y2='5' stroke='%238B4513' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M5 5 L45 20 L5 35 Z' fill='%23FF7F50'/%3E%3Cpath d='M15 20 C20 15 30 25 25 25' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E`;
+ 
+             return (
+                 <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
+                     <div className="flex items-center justify-between mb-4 shrink-0">
+                         <div className="flex items-center gap-2">
+                             <div className="w-10 h-10 bg-[#F6E05E] rounded-full flex items-center justify-center text-white shadow-md border-2 border-white">
+                                 <Icon path={Icons.ShoppingBag} size={20} className="text-[#975A16]" /> 
+                             </div>
+                             <h2 className="text-xl font-black opacity-80">Nook 购物</h2>
+                         </div>
+                     </div>
+         
+                     <div className="flex bg-white/50 p-1 rounded-xl mb-4 shrink-0 backdrop-blur-sm">
+                         <button onClick={() => setTab('daily')} className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-2 ${tab === 'daily' ? 'bg-white text-[#D69E2E] shadow-sm' : 'text-gray-500'}`}>
+                             <span>🥕</span> 日常补货
+                         </button>
+                         <button onClick={() => setTab('wish')} className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-2 ${tab === 'wish' ? 'bg-white text-purple-500 shadow-sm' : 'text-gray-500'}`}>
+                             <span>🎁</span> 心愿清单
+                         </button>
+                     </div>
+         
+                     {tab === 'wish' && (
+                         <div className="nook-card bg-gradient-to-r from-purple-50 to-white border-l-8 border-purple-300 mb-4 py-3 px-4 flex justify-between items-center animate-pop">
+                             <div className="text-xs font-bold text-purple-400">所需铃钱总额</div>
+                             <div className="text-xl font-black text-purple-600 flex items-center gap-1">
+                                 <Icon path={Icons.Coin} size={16}/> {totalWish.toLocaleString()}
+                             </div>
+                         </div>
+                     )}
+         
+                     <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-28 relative z-10">
+                         {filtered.length === 0 && (
+                             <div className="text-center text-gray-400 py-12 text-xs font-bold opacity-60 flex flex-col items-center gap-2">
+                                 <div className="text-3xl grayscale opacity-50">{tab === 'daily' ? '🛒' : '✨'}</div>
+                                 {tab === 'daily' ? '家里物资充足，无需补货' : '暂无心愿，知足常乐'}
+                             </div>
+                         )}
+                         {filtered.map((item, i) => (
+                             <div key={item.id} className={`flex items-center justify-between p-3 pl-4 bg-white rounded-2xl shadow-sm border-l-[6px] transition-all animate-pop group ${item.checked ? 'opacity-50 grayscale bg-gray-50 border-gray-200' : (tab==='daily'?'border-[#F6E05E]':'border-purple-300')}`} style={{animationDelay: `${i*30}ms`}}>
+                                 <div className="flex items-center gap-3 overflow-hidden flex-1 cursor-pointer" onClick={() => toggleItem(item.id)}>
+                                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${item.checked ? 'bg-gray-400 border-gray-400' : 'border-gray-300 bg-white group-hover:border-[#3DAA86]'}`}>
+                                         {item.checked && <Icon path={Icons.Check} size={12} className="text-white"/>}
+                                     </div>
+                                     <div className="flex flex-col min-w-0">
+                                         <span className={`font-bold text-sm truncate transition-all ${item.checked ? 'line-through text-gray-400' : 'text-[#59584D]'}`}>
+                                             {item.name}
+                                         </span>
+                                     </div>
+                                 </div>
+                                 <div className="flex items-center gap-3 shrink-0">
+                                     {item.type === 'wish' && (
+                                         <span className={`text-xs font-black px-2 py-1 rounded-lg ${item.checked ? 'bg-gray-200 text-gray-500' : 'bg-purple-100 text-purple-600'}`}>
+                                             {Number(item.price).toLocaleString()}
+                                         </span>
+                                     )}
+                                     <button onClick={(e) => {e.stopPropagation(); deleteItem(item.id);}} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-full transition-colors">
+                                         <Icon path={Icons.Trash} size={16}/>
+                                     </button>
+                                 </div>
+                             </div>
+                         ))}
+                     </div>
+ 
+                     {/* Timmy & Tommy (纯 CSS/SVG 实现，无网络图片) */}
+                     <div className="absolute bottom-20 right-4 flex gap-2 z-0 pointer-events-none animate-float-slow opacity-90">
+                         {/* Timmy */}
+                         <div className="relative w-14 h-14">
+                              <img src={raccoonSVG('%234CAF50')} className="w-full h-full drop-shadow-md" />
+                              <img src={flagSVG} className="absolute -left-2 top-0 w-8 h-8 transform -rotate-12 origin-bottom-right animate-bounce" style={{animationDuration: '2s'}}/>
+                         </div>
+                         {/* Tommy */}
+                         <div className="relative w-12 h-12 mt-4">
+                             <img src={raccoonSVG('%232196F3')} className="w-full h-full drop-shadow-md" style={{animationDelay: '0.5s'}}/>
+                         </div>
+                     </div>
+         
+                     <div className="flex gap-2 shrink-0 items-center bg-white/80 p-2 rounded-2xl shadow-[0_-4px_10px_rgba(0,0,0,0.05)] backdrop-blur-md absolute bottom-0 left-0 right-0 z-20">
+                         <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} className="flex-[2] bg-transparent outline-none font-bold text-[#59584D] px-2 text-sm placeholder-gray-400" placeholder={tab === 'daily' ? "牛奶, 鸡蛋, 纸巾..." : "Switch, 键盘..."} />
+                         {tab === 'wish' && (<><div className="w-px h-6 bg-gray-300"></div><input type="number" value={price} onChange={e => setPrice(e.target.value)} className="flex-1 bg-transparent outline-none font-bold text-[#59584D] px-2 text-sm text-center w-20 placeholder-gray-400" placeholder="价格"/></>)}
+                         <button onClick={handleAdd} className="bg-[#F6E05E] text-[#975A16] rounded-xl w-10 h-10 flex items-center justify-center font-black shadow-sm active:scale-90 transition-transform hover:bg-[#FAF089]"><Icon path={Icons.Plus} size={20}/></button>
+                     </div>
+                 </div>
+             );
+         };
 		// “今天吃什么” 转盘组件
 		// ==========================================
 		const DecisionApp = ({ options, addOption, deleteOption, showFeedback }) => {
@@ -999,74 +1238,216 @@
             return (<div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full"><div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-2"><div className="w-10 h-10 bg-[#805AD5] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Mic} /></div><h2 className="text-xl font-black opacity-80">录音助手</h2></div><div className="flex items-center bg-white/50 rounded-full px-1 py-1 backdrop-blur-sm"><button onClick={prevMonth} className="p-1.5 hover:bg-white/80 rounded-full text-gray-600 transition-colors"><Icon path={Icons.ChevronLeft} size={16}/></button><span className="text-xs font-bold text-[#59584D] mx-2 min-w-[60px] text-center">{currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月</span><button onClick={nextMonth} className="p-1.5 hover:bg-white/80 rounded-full text-gray-600 transition-colors"><Icon path={Icons.ChevronRight} size={16}/></button></div></div><div className="bg-[#2D3748] rounded-[24px] p-5 text-white shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0 transition-transform hover:scale-[1.02]"><div className="absolute right-0 bottom-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mb-6"></div><div><div className="text-[10px] font-bold opacity-50 mb-1 uppercase">Pending ({currentMonth.getMonth()+1}月)</div><div className="text-2xl font-black text-[#F6AD55] tracking-wide">{monthlyData.pending.toLocaleString()}</div></div><div className="text-right"><div><div className="text-[10px] font-bold opacity-50 mb-1 uppercase">Settled ({currentMonth.getMonth()+1}月)</div><div className="text-xl font-bold text-[#68D391]">{monthlyData.settled.toLocaleString()}</div></div></div></div><button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#805AD5] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#6B46C1] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一笔</button><div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">{monthlyData.list.length === 0 && <div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center"><div className="text-2xl mb-2">🎙️</div>本月暂无工作记录</div>}{monthlyData.list.map((item, i) => (<div key={item.id} className={`bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group animate-pop ${item.settled ? 'opacity-60' : ''}`} style={{animationDelay: `${i*50}ms`}}><div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm transition-colors ${item.settled ? 'bg-green-100 text-green-500' : 'bg-purple-100 text-purple-500'}`}><Icon path={item.settled ? Icons.Check : Icons.Mic} size={18}/></div><div><div className={`font-bold text-sm ${item.settled ? 'line-through text-gray-400' : 'text-[#59584D]'}`}>{item.title}</div><div className="text-[10px] text-gray-400 font-bold">{new Date(item.createdAt).toLocaleDateString()}</div></div></div><div className="flex items-center gap-3"><span className={`font-black ${item.settled ? 'text-gray-400' : 'text-[#805AD5]'}`}>+{item.price.toLocaleString()}</span><button onClick={()=>toggleSettled(item.id)} className={`p-2 rounded-full border-2 transition-all ${item.settled ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 text-gray-300 hover:border-[#805AD5] hover:text-[#805AD5]'}`}><Icon path={Icons.Check} size={14}/></button><button onClick={()=>deleteWork(item.id)} className="text-gray-300 hover:text-red-400 transition"><Icon path={Icons.Trash} size={14}/></button></div></div>))}</div></div>);
         };
         
-        const NookMilesApp = ({ stats, tasks, addTask, completeTask, showFeedback }) => {
-            const [view, setView] = useState('list');
-            const [timeView, setTimeView] = useState('day'); 
-            const [newTitle, setNewTitle] = useState('');
-            const [newDiff, setNewDiff] = useState('normal');
-            const [newType, setNewType] = useState('生活');
-            const [linkMoney, setLinkMoney] = useState(false);
-            const [moneyType, setMoneyType] = useState('income');
-            const [moneyAmount, setMoneyAmount] = useState('');
-            const [fitnessValue, setFitnessValue] = useState('');
-            const levelInfo = getLevelInfo(stats?.xp || 0);
-
-            const filteredTasks = useMemo(() => {
-                const now = new Date();
-                return tasks.filter(t => {
-                    const d = new Date(t.createdAt);
-                    if (timeView === 'day') return d.toDateString() === now.toDateString();
-                    else if (timeView === 'week') return d >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                    else return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                });
-            }, [tasks, timeView]);
-
-            const handleAddTask = () => {
-                if(!newTitle) return alert("请输入任务内容");
-                addTask(newTitle, newDiff, newType, DIFFICULTIES[newDiff].xp, linkMoney ? { type: moneyType, amount: parseInt(moneyAmount) } : null, (newType === '健身' || newType === '吃饭') ? parseInt(fitnessValue) : null);
-                setNewTitle(''); setView('list'); setLinkMoney(false); setMoneyAmount(''); setFitnessValue('');
-                showFeedback("任务已发布！加油！", "success");
-            };
-            
-            const handleComplete = (t) => {
-                if(t.completed) return;
-                completeTask(t.id);
-                const reward = DIFFICULTIES[t.difficulty || 'normal'].xp;
-                showFeedback(`任务完成！+${reward} Miles`, "success");
-            };
-
-            if (view === 'add') return (
-                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
-                    <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button><h2 className="text-xl font-black opacity-80">发布任务</h2></div>
-                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
-                        <div className="nook-card p-4"><label className="text-xs font-bold text-gray-400 mb-1 block">任务内容</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="例如：去钓鱼..."/></div>
-                        <div><label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择类型</label><div className="grid grid-cols-3 gap-2">{['工作', '娱乐', '生活', '健身', '吃饭'].map(t => (<button key={t} onClick={()=>setNewType(t)} className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${newType===t?'border-[#3DAA86] bg-white text-[#3DAA86] scale-95':'border-transparent bg-white/50 text-gray-500'}`}>{t}</button>))}</div></div>
-                        {(newType === '健身' || newType === '吃饭') && (<div className={`nook-card border-l-8 ${newType==='健身'?'border-orange-400':'border-green-400'}`}><label className="text-xs font-bold text-gray-500 mb-1 block">{newType === '健身' ? '预计消耗 (kcal)' : '预计摄入 (kcal)'}</label><input type="number" value={fitnessValue} onChange={e=>setFitnessValue(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none transition-colors" placeholder="0"/></div>)}
-                        <div><label className="text-xs font-bold text-gray-500 mb-2 block ml-2">难度 (XP)</label><div className="grid grid-cols-2 gap-3">{Object.entries(DIFFICULTIES).map(([key, cfg]) => (<button key={key} onClick={()=>setNewDiff(key)} className={`p-3 rounded-xl border-4 text-left transition-all relative overflow-hidden ${newDiff===key ? 'border-[#3DAA86] bg-white shadow-md scale-95' : 'border-transparent bg-white/50'}`}><div className={`absolute top-0 right-0 p-1 px-2 text-[10px] text-white font-bold rounded-bl-lg ${cfg.color}`}>{cfg.xp} XP</div><div className="font-bold text-[#59584D]">{cfg.label}</div></button>))}</div></div>
-                        <div className="nook-card border-l-8 border-yellow-400"><div className="flex items-center justify-between mb-2"><label className="text-xs font-bold text-gray-500">金钱变动</label><label className="nook-switch scale-75"><input type="checkbox" checked={linkMoney} onChange={e=>setLinkMoney(e.target.checked)}/><span className="slider"></span></label></div>{linkMoney && (<div className="space-y-3 animate-pop"><div className="flex bg-gray-100 p-1 rounded-lg"><button onClick={()=>setMoneyType('income')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='income'?'bg-white text-green-600 shadow-sm scale-95':'text-gray-400'}`}>获得</button><button onClick={()=>setMoneyType('expense')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='expense'?'bg-white text-red-500 shadow-sm scale-95':'text-gray-400'}`}>消耗</button></div><div className="relative"><input type="number" value={moneyAmount} onChange={e=>setMoneyAmount(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none focus:border-yellow-400 transition-colors" placeholder="0"/><div className="absolute right-0 top-2 text-[10px] font-bold text-gray-400">BELLS</div></div></div>)}</div>
-                        <button onClick={handleAddTask} className="nook-btn w-full flex justify-center mt-4">发布任务</button>
-                    </div>
-                </div>
-            );
-
-            return (
-                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
-                    <div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-3"><div className="w-12 h-12 bg-[#3DAA86] rounded-full flex items-center justify-center text-white shadow-md relative"><Icon path={Icons.Leaf} size={24}/><div className="absolute -bottom-1 -right-1 bg-yellow-400 text-yellow-900 text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white animate-bounce" style={{animationDuration:'3s'}}>{levelInfo.level}</div></div><div><h2 className="text-lg font-black opacity-80">集里游+</h2><div className="w-24 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden"><div className="h-full bg-yellow-400 progress-bar-fill" style={{width: `${levelInfo.progress}%`}}></div></div><div className="text-[10px] text-gray-400 font-bold mt-0.5">LV.{levelInfo.level} ({parseInt(levelInfo.currentXP)}/{levelInfo.requiredXP})</div></div></div></div>
-                    <div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm shrink-0">{['day','week','month'].map(t => (<button key={t} onClick={()=>setTimeView(t)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView===t?'bg-white text-[#3DAA86] shadow-sm scale-95':'text-gray-500'}`}>{t==='day'?'今日':(t==='week'?'近7天':'本月')}</button>))}</div>
-                    <button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 发布任务</button>
-                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
-                        {filteredTasks.length === 0 && (<div className="text-center text-xs opacity-50 py-10 flex flex-col items-center"><div className="text-2xl mb-2">🌴</div>{timeView === 'day' ? '今天没有任务了，休息一下吧' : '该时间段暂无任务记录'}</div>)}
-                        {filteredTasks.map((t, i) => {
-                            const diff = DIFFICULTIES[t.difficulty || 'normal']; 
-                            return (
-                                <div key={t.id} className={`bg-white rounded-2xl p-4 border-l-8 shadow-sm flex justify-between items-center animate-pop ${t.completed ? 'border-gray-300 opacity-60' : 'border-[#F4A261]'}`} style={{animationDelay: `${i*50}ms`}}><div className="flex items-center gap-3"><div className={`w-3 h-3 rounded-full ${diff.color} shadow-sm ring-2 ${diff.ring}`}></div><div><div className="font-bold text-[#59584D] flex items-center gap-2">{t.title}{t.type && <span className="text-[9px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-md font-bold">{t.type}</span>}{t.money && <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 ${t.money.type==='income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}><Icon path={Icons.Coin} size={10}/> {t.money.amount}</span>}{t.calories && <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 ${t.type==='健身' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}><Icon path={t.type==='健身' ? Icons.Activity : Icons.Utensils} size={10}/> {t.calories}</span>}</div><div className="text-[10px] font-black text-[#38B2AC] bg-[#E6FFFA] px-1.5 py-0.5 rounded inline-block mt-1">{diff.label} +{t.reward} XP <span className="ml-2 opacity-50 font-normal">{new Date(t.createdAt).toLocaleDateString()}</span></div></div></div>{t.completed ? <div className="text-[#3DAA86] anim-stamp"><Icon path={Icons.Leaf}/></div> : <button onClick={() => handleComplete(t)} className="w-10 h-10 rounded-full border-4 border-[#E2E8F0] text-[#CBD5E0] flex items-center justify-center hover:bg-[#3DAA86] hover:text-white transition-all transform active:scale-90"><Icon path={Icons.Check} size={20}/></button>}</div>
-                            );
-                        })}
-                        <div className="text-center text-xs opacity-50 py-4">更多任务将在第二天刷新...</div>
-                    </div>
-                </div>
-            );
-        };
+        // ==========================================
+                // Nook Miles App (修复版)
+                // ==========================================
+                const NookMilesApp = ({ stats, tasks, addTask, updateTask, deleteTask, completeTask, showFeedback }) => {
+                    const [view, setView] = useState('list'); // 'list' | 'editor'
+                    const [timeView, setTimeView] = useState('day'); 
+                    
+                    // 表单状态
+                    const [editingId, setEditingId] = useState(null); // 如果有值，说明是编辑模式
+                    const [newTitle, setNewTitle] = useState('');
+                    const [newDiff, setNewDiff] = useState('normal');
+                    const [newType, setNewType] = useState('生活');
+                    const [linkMoney, setLinkMoney] = useState(false);
+                    const [moneyType, setMoneyType] = useState('income');
+                    const [moneyAmount, setMoneyAmount] = useState('');
+                    const [fitnessValue, setFitnessValue] = useState('');
+                    
+                    const levelInfo = getLevelInfo(stats?.xp || 0);
+        
+                    const filteredTasks = useMemo(() => {
+                        const now = new Date();
+                        return tasks.filter(t => {
+                            const d = new Date(t.createdAt);
+                            if (timeView === 'day') return d.toDateString() === now.toDateString();
+                            else if (timeView === 'week') return d >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                            else return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                        });
+                    }, [tasks, timeView]);
+        
+                    // 打开编辑器（新建模式）
+                    const handleOpenCreate = () => {
+                        setEditingId(null);
+                        setNewTitle(''); 
+                        setNewDiff('normal'); 
+                        setNewType('生活'); 
+                        setLinkMoney(false); 
+                        setMoneyAmount(''); 
+                        setFitnessValue('');
+                        setView('editor');
+                    };
+        
+                    // 打开编辑器（编辑模式）
+                    const handleOpenEdit = (t) => {
+                        setEditingId(t.id);
+                        setNewTitle(t.title);
+                        setNewDiff(t.difficulty || 'normal');
+                        setNewType(t.type || '生活');
+                        
+                        if (t.money) {
+                            setLinkMoney(true);
+                            setMoneyType(t.money.type);
+                            setMoneyAmount(t.money.amount);
+                        } else {
+                            setLinkMoney(false);
+                            setMoneyAmount('');
+                        }
+                        
+                        if (t.calories) setFitnessValue(t.calories);
+                        else setFitnessValue('');
+                        
+                        setView('editor');
+                    };
+        
+                    const handleSave = () => {
+                        if(!newTitle) return alert("请输入任务内容");
+                        
+                        const moneyData = linkMoney ? { type: moneyType, amount: parseInt(moneyAmount) } : null;
+                        const caloriesData = (newType === '健身' || newType === '吃饭') ? parseInt(fitnessValue) : null;
+                        const rewardXP = DIFFICULTIES[newDiff].xp;
+        
+                        if (editingId) {
+                            // 编辑逻辑
+                            updateTask(editingId, {
+                                title: newTitle,
+                                difficulty: newDiff,
+                                type: newType,
+                                reward: rewardXP,
+                                money: moneyData,
+                                calories: caloriesData
+                            });
+                        } else {
+                            // 新建逻辑
+                            addTask(newTitle, newDiff, newType, rewardXP, moneyData, caloriesData);
+                            showFeedback("任务已发布！加油！", "success");
+                        }
+                        
+                        setView('list');
+                    };
+                    
+                    const handleComplete = (t) => {
+                        if(t.completed) return;
+                        completeTask(t.id);
+                        const reward = DIFFICULTIES[t.difficulty || 'normal'].xp;
+                        showFeedback(`任务完成！+${reward} Miles`, "success");
+                    };
+        
+                    // ============ 编辑器视图 ============
+                    if (view === 'editor') return (
+                        <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
+                            <div className="flex items-center gap-2 mb-4 shrink-0">
+                                <button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
+                                    <Icon path={Icons.ArrowLeft} size={24}/>
+                                </button>
+                                <h2 className="text-xl font-black opacity-80">{editingId ? '编辑任务' : '发布任务'}</h2>
+                            </div>
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
+                                <div className="nook-card p-4">
+                                    <label className="text-xs font-bold text-gray-400 mb-1 block">任务内容</label>
+                                    <input value={newTitle} onChange={e=>setNewTitle(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="例如：去钓鱼..."/>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择类型</label>
+                                    <div className="grid grid-cols-3 gap-2">{['工作', '娱乐', '生活', '健身', '吃饭'].map(t => (<button key={t} onClick={()=>setNewType(t)} className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${newType===t?'border-[#3DAA86] bg-white text-[#3DAA86] scale-95':'border-transparent bg-white/50 text-gray-500'}`}>{t}</button>))}</div>
+                                </div>
+                                {(newType === '健身' || newType === '吃饭') && (<div className={`nook-card border-l-8 ${newType==='健身'?'border-orange-400':'border-green-400'}`}><label className="text-xs font-bold text-gray-500 mb-1 block">{newType === '健身' ? '预计消耗 (kcal)' : '预计摄入 (kcal)'}</label><input type="number" value={fitnessValue} onChange={e=>setFitnessValue(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none transition-colors" placeholder="0"/></div>)}
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 mb-2 block ml-2">难度 (XP)</label>
+                                    <div className="grid grid-cols-2 gap-3">{Object.entries(DIFFICULTIES).map(([key, cfg]) => (<button key={key} onClick={()=>setNewDiff(key)} className={`p-3 rounded-xl border-4 text-left transition-all relative overflow-hidden ${newDiff===key ? 'border-[#3DAA86] bg-white shadow-md scale-95' : 'border-transparent bg-white/50'}`}><div className={`absolute top-0 right-0 p-1 px-2 text-[10px] text-white font-bold rounded-bl-lg ${cfg.color}`}>{cfg.xp} XP</div><div className="font-bold text-[#59584D]">{cfg.label}</div></button>))}</div>
+                                </div>
+                                <div className="nook-card border-l-8 border-yellow-400">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-xs font-bold text-gray-500">金钱变动</label>
+                                        <label className="nook-switch scale-75"><input type="checkbox" checked={linkMoney} onChange={e=>setLinkMoney(e.target.checked)}/><span className="slider"></span></label>
+                                    </div>
+                                    {linkMoney && (<div className="space-y-3 animate-pop"><div className="flex bg-gray-100 p-1 rounded-lg"><button onClick={()=>setMoneyType('income')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='income'?'bg-white text-green-600 shadow-sm scale-95':'text-gray-400'}`}>获得</button><button onClick={()=>setMoneyType('expense')} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${moneyType==='expense'?'bg-white text-red-500 shadow-sm scale-95':'text-gray-400'}`}>消耗</button></div><div className="relative"><input type="number" value={moneyAmount} onChange={e=>setMoneyAmount(e.target.value)} className="w-full bg-transparent border-b-2 border-gray-200 py-1 text-center font-black text-xl outline-none focus:border-yellow-400 transition-colors" placeholder="0"/><div className="absolute right-0 top-2 text-[10px] font-bold text-gray-400">BELLS</div></div></div>)}
+                                </div>
+                                <button onClick={handleSave} className="nook-btn w-full flex justify-center mt-4">{editingId ? '保存修改' : '发布任务'}</button>
+                            </div>
+                        </div>
+                    );
+        
+                    // ============ 列表视图 ============
+                    return (
+                        <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
+                            <div className="flex items-center justify-between mb-4 shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-[#3DAA86] rounded-full flex items-center justify-center text-white shadow-md relative">
+                                        <Icon path={Icons.Leaf} size={24}/>
+                                        <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-yellow-900 text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white animate-bounce" style={{animationDuration:'3s'}}>{levelInfo.level}</div>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-black opacity-80">集里游+</h2>
+                                        <div className="w-24 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden"><div className="h-full bg-yellow-400 progress-bar-fill" style={{width: `${levelInfo.progress}%`}}></div></div>
+                                        <div className="text-[10px] text-gray-400 font-bold mt-0.5">LV.{levelInfo.level} ({parseInt(levelInfo.currentXP)}/{levelInfo.requiredXP})</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm shrink-0">
+                                {['day','week','month'].map(t => (<button key={t} onClick={()=>setTimeView(t)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView===t?'bg-white text-[#3DAA86] shadow-sm scale-95':'text-gray-500'}`}>{t==='day'?'今日':(t==='week'?'近7天':'本月')}</button>))}
+                            </div>
+                            
+                            <button onClick={handleOpenCreate} className="absolute bottom-6 right-2 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop">
+                                <Icon path={Icons.Plus} size={18}/> 发布任务
+                            </button>
+                            
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
+                                {filteredTasks.length === 0 && (<div className="text-center text-xs opacity-50 py-10 flex flex-col items-center"><div className="text-2xl mb-2">🌴</div>{timeView === 'day' ? '今天没有任务了，休息一下吧' : '该时间段暂无任务记录'}</div>)}
+                                
+                                {filteredTasks.map((t, i) => {
+                                    const diff = DIFFICULTIES[t.difficulty || 'normal']; 
+                                    return (
+                                        <div key={t.id} className={`bg-white rounded-2xl p-4 border-l-8 shadow-sm flex justify-between items-center animate-pop group ${t.completed ? 'border-gray-300 opacity-60' : 'border-[#F4A261]'}`} style={{animationDelay: `${i*50}ms`}}>
+                                            <div className="flex items-center gap-3 overflow-hidden flex-1">
+                                                <div className={`w-3 h-3 rounded-full ${diff.color} shadow-sm ring-2 ${diff.ring} shrink-0`}></div>
+                                                <div className="min-w-0">
+                                                    <div className="font-bold text-[#59584D] flex items-center gap-2 flex-wrap">
+                                                        <span className="truncate">{t.title}</span>
+                                                        {t.type && <span className="text-[9px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-md font-bold whitespace-nowrap">{t.type}</span>}
+                                                        {t.money && <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 whitespace-nowrap ${t.money.type==='income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}><Icon path={Icons.Coin} size={10}/> {t.money.amount}</span>}
+                                                        {t.calories && <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 whitespace-nowrap ${t.type==='健身' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}><Icon path={t.type==='健身' ? Icons.Activity : Icons.Utensils} size={10}/> {t.calories}</span>}
+                                                    </div>
+                                                    <div className="text-[10px] font-black text-[#38B2AC] bg-[#E6FFFA] px-1.5 py-0.5 rounded inline-block mt-1">
+                                                        {diff.label} +{t.reward} XP <span className="ml-2 opacity-50 font-normal">{new Date(t.createdAt).toLocaleDateString()}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                                                {/* 仅在未完成时显示编辑按钮 */}
+                                                {!t.completed && (
+                                                    <button onClick={() => handleOpenEdit(t)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center hover:bg-blue-100 hover:text-blue-500 transition-colors">
+                                                        <Icon path={Icons.Edit} size={14}/>
+                                                    </button>
+                                                )}
+                                                
+                                                {/* 删除按钮 */}
+                                                <button onClick={() => deleteTask(t.id)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-colors">
+                                                    <Icon path={Icons.Trash} size={14}/>
+                                                </button>
+        
+                                                {/* 完成按钮 */}
+                                                {t.completed ? (
+                                                    <div className="w-10 h-10 flex items-center justify-center text-[#3DAA86] anim-stamp">
+                                                        <Icon path={Icons.Leaf} size={24}/>
+                                                    </div>
+                                                ) : (
+                                                    <button onClick={() => handleComplete(t)} className="w-10 h-10 rounded-full border-4 border-[#E2E8F0] text-[#CBD5E0] flex items-center justify-center hover:bg-[#3DAA86] hover:text-white hover:border-[#3DAA86] transition-all transform active:scale-90 shadow-sm">
+                                                        <Icon path={Icons.Check} size={20}/>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                <div className="text-center text-xs opacity-50 py-4">更多任务将在第二天刷新...</div>
+                            </div>
+                        </div>
+                    );
+                };
 
         const DailyBroadcastApp = ({ tasks, ledger, fitLogs, voiceWorks, wikiItems, stats }) => {
             const getGreeting = () => {
@@ -1385,172 +1766,162 @@
                 
                             // ------------------------------------------
                             // 核心修复 2: 超级乐观更新 (本地立即响应，无需等待)
-                            // ------------------------------------------
-                
-                            // ------------------------------------------
-                                        // 增强版 taskActions (支持增删改)
-                                        // ------------------------------------------
-                             // ------------------------------------------
-                                         // 增强版 taskActions (支持删除回滚)
-                                         // ------------------------------------------
-                                         const taskActions = {
-                                             addTask: async (title, diff, type, reward, money, calories) => {
-                                                 const Task = AV.Object.extend('NookTask');
-                                                 const t = new Task();
-                                                 t.set('user', localUser);
-                                                 t.set('title', title);
-                                                 t.set('difficulty', diff);
-                                                 t.set('type', type);
-                                                 t.set('reward', reward);
-                                                 t.set('completed', false);
-                                                 if(money) t.set('money', money);
-                                                 if(calories) t.set('calories', calories);
-                                                 t.set('date', new Date().toLocaleDateString());
-                                                 
-                                                 const tempId = 'temp_' + Date.now();
-                                                 const optimTask = { id: tempId, title, difficulty: diff, type, reward, completed: false, money, calories, timestamp: Date.now(), createdAt: new Date().toISOString() };
-                                                 setTasks(prev => [optimTask, ...prev]);
-                             
-                                                 try {
-                                                     const saved = await t.save();
-                                                     setTasks(prev => prev.map(x => x.id === tempId ? simplify(saved) : x));
-                                                 } catch(e) { 
-                                                     setTasks(prev => prev.filter(x => x.id !== tempId)); 
-                                                     showFeedback("网络错误，任务保存失败", "error");
-                                                 }
-                                             },
-                                             updateTask: async (id, updates) => {
-                                                 if (id.toString().startsWith('temp_')) return;
-                                                 setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-                                                 try {
-                                                     const tObj = AV.Object.createWithoutData('NookTask', id);
-                                                     if(updates.title) tObj.set('title', updates.title);
-                                                     if(updates.difficulty) tObj.set('difficulty', updates.difficulty);
-                                                     if(updates.type) tObj.set('type', updates.type);
-                                                     await tObj.save();
-                                                     showFeedback("任务已更新");
-                                                 } catch(e) { showFeedback("更新失败", "error"); }
-                                             },
-                                             deleteTask: async (id) => {
-                                                 if (id.toString().startsWith('temp_')) return;
-                                                 
-                                                 // 1. 先找到这个任务，用于计算回滚数据
-                                                 const task = tasks.find(t => t.id === id);
-                                                 if (!task) return;
-                             
-                                                 const confirmMsg = task.completed 
-                                                     ? "删除已完成任务将【撤销】获得的里程、经验和金钱。确定吗？" 
-                                                     : "确定要删除这个任务吗？";
-                                                 
-                                                 if(!confirm(confirmMsg)) return;
-                             
-                                                 // 2. 乐观删除 UI (立即从列表消失)
-                                                 setTasks(prev => prev.filter(t => t.id !== id));
-                                                 
-                                                 // 3. 如果任务已完成，执行数据回滚 (Revert Stats)
-                                                 if (task.completed) {
-                                                     let reverseMiles = task.reward || 0;
-                                                     let reversePocket = 0;
-                             
-                                                     // 计算金钱回滚：赚了就要扣掉，花了就要退回
-                                                     if (task.money) {
-                                                         if (task.money.type === 'income') {
-                                                             reversePocket = -task.money.amount; // 扣除收入
-                                                         } else {
-                                                             reversePocket = task.money.amount;  // 退还支出
-                                                         }
-                                                     }
-                             
-                                                     // 立即更新本地 Stats
-                                                     setStats(prev => ({
-                                                         ...prev,
-                                                         miles: Math.max(0, (prev.miles || 0) - reverseMiles),
-                                                         xp: Math.max(0, (prev.xp || 0) - reverseMiles),
-                                                         pocket: (prev.pocket || 0) + reversePocket
-                                                     }));
-                             
-                                                     // 异步更新服务器 Stats
-                                                     try {
-                                                         const sObj = AV.Object.createWithoutData('NookStats', stats.id);
-                                                         if(reverseMiles > 0) {
-                                                             sObj.increment('miles', -reverseMiles);
-                                                             sObj.increment('xp', -reverseMiles);
-                                                         }
-                                                         if(reversePocket !== 0) {
-                                                             sObj.increment('pocket', reversePocket);
-                                                         }
-                                                         await sObj.save();
-                                                     } catch(e) { console.error("Stats revert failed", e); }
-                                                     
-                                                     // 注意：这里我们只修正余额。
-                                                     // 为了逻辑简单，不再去 Ledger 表里查找并删除那条具体的流水记录（因为没有存关联ID），
-                                                     // 但余额修正了，总账就是对的。
-                                                 }
-                             
-                                                 // 4. 服务器删除任务
-                                                 try {
-                                                     const tObj = AV.Object.createWithoutData('NookTask', id);
-                                                     await tObj.destroy();
-                                                     showFeedback("任务已删除", "success");
-                                                 } catch(e) {
-                                                     console.error(e);
-                                                     showFeedback("删除失败", "error");
-                                                 }
-                                             },
-                                             completeTask: async (taskId) => {
-                                                 if (taskId.toString().startsWith('temp_')) return;
-                                                 const task = tasks.find(t => t.id === taskId);
-                                                 if(!task || task.completed) return;
-                                                 
-                                                 setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: true } : t));
-                                                 
-                                                 setStats(prev => ({
-                                                     ...prev,
-                                                     miles: (prev.miles || 0) + task.reward,
-                                                     xp: (prev.xp || 0) + task.reward
-                                                 }));
-                             
-                                                 try {
-                                                     const tObj = AV.Object.createWithoutData('NookTask', taskId);
-                                                     tObj.set('completed', true);
-                                                     await tObj.save();
-                             
-                                                     const sObj = AV.Object.createWithoutData('NookStats', stats.id);
-                                                     sObj.increment('miles', task.reward);
-                                                     sObj.increment('xp', task.reward);
-                                                     await sObj.save();
-                             
-                                                     if(task.money) {
-                                                         const Ledger = AV.Object.extend('NookLedger');
-                                                         const l = new Ledger();
-                                                         l.set('user', localUser);
-                                                         l.set('type', task.money.type);
-                                                         l.set('amount', task.money.amount);
-                                                         l.set('category', '任务');
-                                                         l.set('note', task.title);
-                                                         l.set('date', new Date().toLocaleDateString());
-                                                         l.set('timestamp', Date.now());
-                                                         const lSaved = await l.save();
-                                                         setLedger(prev => [simplify(lSaved), ...prev]);
-                                                         
-                                                         // 更新本地余额 UI
-                                                         if(task.money.type === 'income') {
-                                                             setStats(prev => ({...prev, pocket: (prev.pocket||0) + task.money.amount}));
-                                                             const s2 = AV.Object.createWithoutData('NookStats', stats.id);
-                                                             s2.increment('pocket', task.money.amount);
-                                                             s2.save();
-                                                         } else {
-                                                             setStats(prev => ({...prev, pocket: (prev.pocket||0) - task.money.amount}));
-                                                             const s3 = AV.Object.createWithoutData('NookStats', stats.id);
-                                                             s3.increment('pocket', -task.money.amount);
-                                                             s3.save();
-                                                         }
-                                                     }
-                                                 } catch(e) { 
-                                                     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: false } : t));
-                                                 }
-                                             }
-                                         };
+                           // ==========================================
+        // 增强版 Task Actions (支持完整编辑)
+        // ==========================================
+        // ==========================================
+                // 增强版 Task Actions (支持完整编辑)
+                // ==========================================
+                const taskActions = {
+                    addTask: async (title, diff, type, reward, money, calories) => {
+                        const Task = AV.Object.extend('NookTask');
+                        const t = new Task();
+                        t.set('user', localUser);
+                        t.set('title', title);
+                        t.set('difficulty', diff);
+                        t.set('type', type);
+                        t.set('reward', reward);
+                        t.set('completed', false);
+                        if(money) t.set('money', money);
+                        if(calories) t.set('calories', calories);
+                        t.set('date', new Date().toLocaleDateString());
+                        
+                        const tempId = 'temp_' + Date.now();
+                        const optimTask = { id: tempId, title, difficulty: diff, type, reward, completed: false, money, calories, timestamp: Date.now(), createdAt: new Date().toISOString() };
+                        setTasks(prev => [optimTask, ...prev]);
+        
+                        try {
+                            const saved = await t.save();
+                            setTasks(prev => prev.map(x => x.id === tempId ? simplify(saved) : x));
+                        } catch(e) { 
+                            setTasks(prev => prev.filter(x => x.id !== tempId)); 
+                            showFeedback("网络错误，任务保存失败", "error");
+                        }
+                    },
+                    
+                    // [核心修改] 增强的 updateTask，支持所有字段更新
+                    updateTask: async (id, updates) => {
+                        if (id.toString().startsWith('temp_')) return;
+                        
+                        // 1. 乐观更新本地 UI
+                        setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+                        
+                        // 2. 云端保存
+                        try {
+                            const tObj = AV.Object.createWithoutData('NookTask', id);
+                            if(updates.title !== undefined) tObj.set('title', updates.title);
+                            if(updates.difficulty !== undefined) tObj.set('difficulty', updates.difficulty);
+                            if(updates.type !== undefined) tObj.set('type', updates.type);
+                            if(updates.reward !== undefined) tObj.set('reward', updates.reward);
+                            
+                            // 处理金钱字段
+                            if(updates.money !== undefined) {
+                                if (updates.money === null) tObj.unset('money');
+                                else tObj.set('money', updates.money);
+                            }
+                            
+                            // 处理卡路里字段
+                            if(updates.calories !== undefined) {
+                                if (updates.calories === null) tObj.unset('calories');
+                                else tObj.set('calories', updates.calories);
+                            }
+        
+                            await tObj.save();
+                            showFeedback("任务已更新");
+                        } catch(e) { 
+                            console.error(e);
+                            showFeedback("更新失败", "error"); 
+                        }
+                    },
+                    
+                    deleteTask: async (id) => {
+                        if (id.toString().startsWith('temp_')) return;
+                        const task = tasks.find(t => t.id === id);
+                        if (!task) return;
+        
+                        if(!confirm(task.completed ? "删除已完成任务将【撤销】获得的里程、经验和金钱。确定吗？" : "确定要删除这个任务吗？")) return;
+        
+                        setTasks(prev => prev.filter(t => t.id !== id));
+                        
+                        if (task.completed) {
+                            // 回滚逻辑
+                            let reverseMiles = task.reward || 0;
+                            let reversePocket = 0;
+                            if (task.money) {
+                                if (task.money.type === 'income') reversePocket = -task.money.amount;
+                                else reversePocket = task.money.amount;
+                            }
+                            setStats(prev => ({
+                                ...prev,
+                                miles: Math.max(0, (prev.miles || 0) - reverseMiles),
+                                xp: Math.max(0, (prev.xp || 0) - reverseMiles),
+                                pocket: (prev.pocket || 0) + reversePocket
+                            }));
+                            try {
+                                const sObj = AV.Object.createWithoutData('NookStats', stats.id);
+                                if(reverseMiles > 0) { sObj.increment('miles', -reverseMiles); sObj.increment('xp', -reverseMiles); }
+                                if(reversePocket !== 0) { sObj.increment('pocket', reversePocket); }
+                                await sObj.save();
+                            } catch(e) {}
+                        }
+        
+                        try {
+                            const tObj = AV.Object.createWithoutData('NookTask', id);
+                            await tObj.destroy();
+                            showFeedback("任务已删除", "success");
+                        } catch(e) {
+                            showFeedback("删除失败", "error");
+                        }
+                    },
+                    
+                    completeTask: async (taskId) => {
+                        if (taskId.toString().startsWith('temp_')) return;
+                        const task = tasks.find(t => t.id === taskId);
+                        if(!task || task.completed) return;
+                        
+                        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: true } : t));
+                        setStats(prev => ({ ...prev, miles: (prev.miles || 0) + task.reward, xp: (prev.xp || 0) + task.reward }));
+        
+                        try {
+                            const tObj = AV.Object.createWithoutData('NookTask', taskId);
+                            tObj.set('completed', true);
+                            await tObj.save();
+        
+                            const sObj = AV.Object.createWithoutData('NookStats', stats.id);
+                            sObj.increment('miles', task.reward);
+                            sObj.increment('xp', task.reward);
+                            await sObj.save();
+        
+                            if(task.money) {
+                                const Ledger = AV.Object.extend('NookLedger');
+                                const l = new Ledger();
+                                l.set('user', localUser);
+                                l.set('type', task.money.type);
+                                l.set('amount', task.money.amount);
+                                l.set('category', '任务');
+                                l.set('note', task.title);
+                                l.set('date', new Date().toLocaleDateString());
+                                l.set('timestamp', Date.now());
+                                const lSaved = await l.save();
+                                setLedger(prev => [simplify(lSaved), ...prev]);
+                                
+                                if(task.money.type === 'income') {
+                                    setStats(prev => ({...prev, pocket: (prev.pocket||0) + task.money.amount}));
+                                    const s2 = AV.Object.createWithoutData('NookStats', stats.id);
+                                    s2.increment('pocket', task.money.amount);
+                                    s2.save();
+                                } else {
+                                    setStats(prev => ({...prev, pocket: (prev.pocket||0) - task.money.amount}));
+                                    const s3 = AV.Object.createWithoutData('NookStats', stats.id);
+                                    s3.increment('pocket', -task.money.amount);
+                                    s3.save();
+                                }
+                            }
+                        } catch(e) { 
+                            setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: false } : t));
+                        }
+                    }
+                };
 										 
                 
                             const ledgerActions = {
@@ -1681,21 +2052,125 @@
                             // Wiki, Fitness, VoiceWork Actions 保持同样的乐观更新模式 (省略重复代码以节省空间)
                             // 你现有的代码这部分没问题，主要是 fetchData 阻塞了
                 
-                            const wikiActions = {
-                                add: async (title, content) => {
-                                    const Wiki = AV.Object.extend('NookWiki');
-                                    const w = new Wiki();
-                                    w.set('user', localUser);
-                                    w.set('title', title);
-                                    w.set('content', content);
-                                    const tempId = 'temp_' + Date.now();
-                                    const optim = { id: tempId, title, content, updatedTimestamp: Date.now() };
-                                    setWikiItems(prev => [optim, ...prev]);
-                                    try { const saved = await w.save(); setWikiItems(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {}
-                                },
-                                update: async (id, title, content) => { if (id.toString().startsWith('temp_')) return; setWikiItems(prev => prev.map(x => x.id === id ? { ...x, title, content, updatedTimestamp: Date.now() } : x)); try { const w = AV.Object.createWithoutData('NookWiki', id); w.set('title', title); w.set('content', content); await w.save(); } catch(e) {} },
-                                remove: async (id) => { if (id.toString().startsWith('temp_')) return; setWikiItems(prev => prev.filter(x => x.id !== id)); try { const obj = AV.Object.createWithoutData('NookWiki', id); await obj.destroy(); } catch(e) {} }
-                            };
+                            // ==========================================
+                                                        // Wiki Actions (包含图片上传逻辑)
+                                                        // ==========================================
+                                                        const wikiActions = {
+                                                            // 新增动作
+                                                            add: async (title, content, file) => {
+                                                                let imageUrl = null;
+                                                                
+                                                                // 1. 如果用户选择了文件，先执行上传
+                                                                if (file) {
+                                                                    try {
+                                                                        const avFile = new AV.File(file.name, file);
+                                                                        const savedFile = await avFile.save();
+                                                                        imageUrl = savedFile.url(); // 获取上传后的云端 URL
+                                                                    } catch (e) {
+                                                                        console.error("Image upload failed", e);
+                                                                        showFeedback("图片上传失败，请检查网络", "error");
+                                                                        return; // 如果图片上传失败，终止保存
+                                                                    }
+                                                                }
+                            
+                                                                // 2. 准备乐观更新的数据 (为了UI即时反馈)
+                                                                // 如果有新文件，暂用本地 blob URL 显示；否则用 null
+                                                                const displayImageForOptimistic = file ? URL.createObjectURL(file) : null;
+                                                                const tempId = 'temp_' + Date.now();
+                                                                const optim = { id: tempId, title, content, image: displayImageForOptimistic, updatedTimestamp: Date.now() };
+                                                                
+                                                                // 立即更新UI
+                                                                setWikiItems(prev => [optim, ...prev]);
+                            
+                                                                // 3. 保存数据到 LeanCloud
+                                                                const Wiki = AV.Object.extend('NookWiki');
+                                                                const w = new Wiki();
+                                                                w.set('user', localUser);
+                                                                w.set('title', title);
+                                                                w.set('content', content);
+                                                                // 如果有上传成功的 URL，保存到数据库
+                                                                if (imageUrl) w.set('image', imageUrl); 
+                            
+                                                                try { 
+                                                                    const saved = await w.save(); 
+                                                                    // 保存成功后，用服务器返回的真实数据（包含真实的 image URL）替换掉本地的临时数据
+                                                                    setWikiItems(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); 
+                                                                    showFeedback("小知识已保存！");
+                                                                    // 清理临时的 blob URL (虽然组件里也有清理，加一层保险)
+                                                                    if (displayImageForOptimistic) URL.revokeObjectURL(displayImageForOptimistic);
+                                                                } catch(e) { 
+                                                                    // 如果保存失败，回滚 UI
+                                                                    setWikiItems(prev => prev.filter(x => x.id !== tempId)); 
+                                                                    showFeedback("保存失败，请重试", "error");
+                                                                }
+                                                            },
+                            
+                                                            // 更新动作
+                                                            update: async (id, title, content, file, oldImageUrl) => {
+                                                                if (id.toString().startsWith('temp_')) return;
+                            
+                                                                let finalImageUrl = oldImageUrl; // 默认假设延用旧图
+                            
+                                                                // 1. 判断图片处理逻辑
+                                                                if (file) {
+                                                                    // Case A: 用户上传了新图片 -> 上传新图，使用新 URL
+                                                                    try {
+                                                                        const avFile = new AV.File(file.name, file);
+                                                                        const savedFile = await avFile.save();
+                                                                        finalImageUrl = savedFile.url();
+                                                                    } catch (e) {
+                                                                        console.error("Image upload failed", e);
+                                                                        showFeedback("图片上传失败", "error");
+                                                                        return;
+                                                                    }
+                                                                } else if (oldImageUrl === null) {
+                                                                    // Case B: 用户在 UI 上点击了删除按钮 (此时 file 为 null, oldImageUrl 也被组件置为 null)
+                                                                    finalImageUrl = null;
+                                                                }
+                                                                // Case C: 用户没动图片 (file 为 null, oldImageUrl 有值) -> finalImageUrl 保持为 oldImageUrl
+                            
+                                                                // 2. 乐观更新 UI
+                                                                // 如果有新文件用本地 blob，否则用计算出的 finalUrl
+                                                                const displayImageForOptimistic = file ? URL.createObjectURL(file) : finalImageUrl;
+                                                                setWikiItems(prev => prev.map(x => x.id === id ? { ...x, title, content, image: displayImageForOptimistic, updatedTimestamp: Date.now() } : x));
+                            
+                                                                // 3. 云端更新
+                                                                try { 
+                                                                    const w = AV.Object.createWithoutData('NookWiki', id);
+                                                                    w.set('title', title);
+                                                                    w.set('content', content);
+                                                                    
+                                                                    if (finalImageUrl) {
+                                                                        w.set('image', finalImageUrl);
+                                                                    } else {
+                                                                        // 关键：如果最终没有图片 URL，需要从数据库中 unset 掉这个字段
+                                                                        w.unset('image'); 
+                                                                    }
+                            
+                                                                    await w.save();
+                                                                    showFeedback("已更新！");
+                                                                    if (file && displayImageForOptimistic) URL.revokeObjectURL(displayImageForOptimistic);
+                                                                } catch(e) { 
+                                                                    showFeedback("更新失败", "error");
+                                                                    // 这里为了简化没有做严格的 UI 回滚，因为概率较低，且下次刷新会恢复
+                                                                }
+                                                            },
+                            
+                                                            // 删除动作 (保持不变)
+                                                            remove: async (id) => { 
+                                                                if (id.toString().startsWith('temp_')) return; 
+                                                                setWikiItems(prev => prev.filter(x => x.id !== id)); 
+                                                                try { 
+                                                                    const obj = AV.Object.createWithoutData('NookWiki', id); 
+                                                                    await obj.destroy(); 
+                                                                    showFeedback("已删除");
+                                                                    // 注意：LeanCloud 免费版删除对象时不会自动删除关联的 AV.File 文件。
+                                                                    // 如果需要节省空间，需要自行调用 REST API 清理未引用的文件，这里暂不实现。
+                                                                } catch(e) {
+                                                                    showFeedback("删除失败", "error");
+                                                                } 
+                                                            }
+                                                        };
                 
                             const fitnessActions = {
                                 updateProfile: async (p) => { setFitProfile(p); try { const f = AV.Object.createWithoutData('NookFitProfile', fitProfile.id); f.set('height', p.height); f.set('weight', p.weight); f.set('age', p.age); f.set('gender', p.gender); await f.save(); } catch(e) {} },
