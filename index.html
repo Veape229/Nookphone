@@ -1054,14 +1054,135 @@
             return (<div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full"><div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-2"><div className="w-10 h-10 bg-[#FFD166] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Book} /></div><h2 className="text-xl font-black opacity-80">记账本</h2></div></div><div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm shrink-0">{['day', 'week', 'month'].map(t => (<button key={t} onClick={()=>setTimeView(t)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView===t?'bg-white text-[#3DAA86] shadow-sm scale-95':'text-gray-500'}`}>{t==='day' ? '今日' : (t==='week' ? '近7天' : '本月')}</button>))}</div><div className="bg-[#3D405B] rounded-[24px] p-5 text-[#F4F1DE] shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0 transition-transform hover:scale-[1.02]"><div className="absolute right-0 bottom-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mb-6"></div><div><div className="text-[10px] opacity-60 font-bold mb-1">{getSummaryTitle()}</div><div className="text-2xl font-black tracking-wide">{summary.balance.toLocaleString()}</div></div><div className="text-right space-y-1"><div><span className="text-[10px] bg-green-500/20 text-green-300 px-1.5 rounded mr-1">收</span><span className="text-sm font-bold">{summary.income.toLocaleString()}</span></div><div><span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 rounded mr-1">支</span><span className="text-sm font-bold">{summary.expense.toLocaleString()}</span></div></div></div><button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一笔</button><div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">{filteredLedger.length === 0 && (<div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center"><div className="text-2xl mb-2">📒</div>{timeView === 'day' ? '今天暂无账单' : '暂无记录'}</div>)}{filteredLedger.map((item, i) => (<div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group animate-pop" style={{animationDelay: `${i*50}ms`}}><div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm ${item.type==='expense'?'bg-red-400':'bg-green-400'}`}>{item.category.substring(0,2)}</div><div><div className="font-bold text-[#59584D] text-sm">{item.category} <span className="text-xs font-normal text-gray-400 ml-1">{item.note}</span></div><div className="text-[10px] text-gray-400 font-bold">{item.date}</div></div></div><div className="flex items-center gap-3"><span className={`font-black ${item.type==='expense'?'text-red-500':'text-green-500'}`}>{item.type==='expense'?'-':'+'}{item.amount.toLocaleString()}</span><button onClick={()=>handleDelete(item.id)} className="text-gray-300 hover:text-red-400 transition transform hover:scale-110"><Icon path={Icons.Trash} size={14}/></button></div></div>))}</div></div>);
         };
 
+        // ==========================================
+        // VoiceWorkApp 组件 (录音助手 - 修正后的版本)
+        // ==========================================
         const VoiceWorkApp = ({ voiceWorks, addWork, toggleSettled, deleteWork, showFeedback }) => {
-            const [view, setView] = useState('list'); const [title, setTitle] = useState(''); const [price, setPrice] = useState(''); const [currentMonth, setCurrentMonth] = useState(new Date());
+            const [view, setView] = useState('list'); 
+            const [title, setTitle] = useState(''); 
+            const [price, setPrice] = useState(''); 
+            const [currentMonth, setCurrentMonth] = useState(new Date());
+        
             const nextMonth = () => { const d = new Date(currentMonth); d.setMonth(d.getMonth() + 1); setCurrentMonth(d); };
             const prevMonth = () => { const d = new Date(currentMonth); d.setMonth(d.getMonth() - 1); setCurrentMonth(d); };
-            const monthlyData = useMemo(() => { const y = currentMonth.getFullYear(); const m = currentMonth.getMonth(); const filtered = voiceWorks.filter(w => { const d = new Date(w.createdAt); return d.getFullYear() === y && d.getMonth() === m; }).sort((a,b) => b.createdAt - a.createdAt); let settled = 0, pending = 0; filtered.forEach(w => w.settled ? settled += w.price : pending += w.price); return { list: filtered, settled, pending }; }, [voiceWorks, currentMonth]);
-            const handleSave = () => { if(!title || !price) return alert("请填写完整信息"); addWork(title, price); setTitle(''); setPrice(''); setView('list'); showFeedback("工作记录已添加！"); };
-            if(view === 'add') return (<div className="flex flex-col flex-1 min-h-0 screen-enter h-full"><div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button><h2 className="text-xl font-black opacity-80">添加工作</h2></div><div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4"><div className="nook-card p-4"><label className="text-xs font-bold text-gray-400 mb-1 block">录音名称</label><input value={title} onChange={e=>setTitle(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="例如：第1集..."/></div><div className="nook-card p-4"><label className="text-xs font-bold text-gray-400 mb-1 block">报酬单价</label><input type="number" value={price} onChange={e=>setPrice(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="0"/></div><button onClick={handleSave} className="nook-btn w-full mt-4">保存记录</button></div></div>);
-            return (<div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full"><div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-2"><div className="w-10 h-10 bg-[#805AD5] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Mic} /></div><h2 className="text-xl font-black opacity-80">录音助手</h2></div><div className="flex items-center bg-white/50 rounded-full px-1 py-1 backdrop-blur-sm"><button onClick={prevMonth} className="p-1.5 hover:bg-white/80 rounded-full text-gray-600 transition-colors"><Icon path={Icons.ChevronLeft} size={16}/></button><span className="text-xs font-bold text-[#59584D] mx-2 min-w-[60px] text-center">{currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月</span><button onClick={nextMonth} className="p-1.5 hover:bg-white/80 rounded-full text-gray-600 transition-colors"><Icon path={Icons.ChevronRight} size={16}/></button></div></div><div className="bg-[#2D3748] rounded-[24px] p-5 text-white shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0 transition-transform hover:scale-[1.02]"><div className="absolute right-0 bottom-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mb-6"></div><div><div className="text-[10px] font-bold opacity-50 mb-1 uppercase">Pending ({currentMonth.getMonth()+1}月)</div><div className="text-2xl font-black text-[#F6AD55] tracking-wide">{monthlyData.pending.toLocaleString()}</div></div><div className="text-right"><div><div className="text-[10px] font-bold opacity-50 mb-1 uppercase">Settled ({currentMonth.getMonth()+1}月)</div><div className="text-xl font-bold text-[#68D391]">{monthlyData.settled.toLocaleString()}</div></div></div></div><button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#805AD5] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#6B46C1] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一笔</button><div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">{monthlyData.list.length === 0 && <div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center"><div className="text-2xl mb-2">🎙️</div>本月暂无工作记录</div>}{monthlyData.list.map((item, i) => (<div key={item.id} className={`bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group animate-pop ${item.settled ? 'opacity-60' : ''}`} style={{animationDelay: `${i*50}ms`}}><div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm transition-colors ${item.settled ? 'bg-green-100 text-green-500' : 'bg-purple-100 text-purple-500'}`}><Icon path={item.settled ? Icons.Check : Icons.Mic} size={18}/></div><div><div className={`font-bold text-sm ${item.settled ? 'line-through text-gray-400' : 'text-[#59584D]'}`}>{item.title}</div><div className="text-[10px] text-gray-400 font-bold">{new Date(item.createdAt).toLocaleDateString()}</div></div></div><div className="flex items-center gap-3"><span className={`font-black ${item.settled ? 'text-gray-400' : 'text-[#805AD5]'}`}>+{item.price.toLocaleString()}</span><button onClick={()=>toggleSettled(item.id)} className={`p-2 rounded-full border-2 transition-all ${item.settled ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 text-gray-300 hover:border-[#805AD5] hover:text-[#805AD5]'}`}><Icon path={Icons.Check} size={14}/></button><button onClick={()=>deleteWork(item.id)} className="text-gray-300 hover:text-red-400 transition"><Icon path={Icons.Trash} size={14}/></button></div></div>))}</div></div>);
+            
+            const monthlyData = useMemo(() => { 
+                const y = currentMonth.getFullYear(); 
+                const m = currentMonth.getMonth(); 
+                const filtered = voiceWorks
+                    .filter(w => { 
+                        // 修正：确保 createdAt 是有效的日期字符串
+                        const d = new Date(w.createdAt); 
+                        return !isNaN(d) && d.getFullYear() === y && d.getMonth() === m; 
+                    })
+                    .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // 确保按时间排序
+        
+                let settled = 0, pending = 0; 
+                filtered.forEach(w => w.settled ? settled += w.price : pending += w.price); 
+                return { list: filtered, settled, pending }; 
+            }, [voiceWorks, currentMonth]);
+        
+            const handleSave = () => { 
+                if(!title || !price) return alert("请填写完整信息"); 
+                addWork(title, price); 
+                setTitle(''); 
+                setPrice(''); 
+                setView('list'); 
+                showFeedback("工作记录已添加！"); 
+            };
+        
+            if(view === 'add') return (
+                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
+                    <div className="flex items-center gap-2 mb-4 shrink-0">
+                        <button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
+                            <Icon path={Icons.ArrowLeft} size={24}/>
+                        </button>
+                        <h2 className="text-xl font-black opacity-80">添加工作</h2>
+                    </div>
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
+                        <div className="nook-card p-4">
+                            <label className="text-xs font-bold text-gray-400 mb-1 block">录音名称</label>
+                            <input value={title} onChange={e=>setTitle(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="例如：第1集..."/>
+                        </div>
+                        <div className="nook-card p-4">
+                            <label className="text-xs font-bold text-gray-400 mb-1 block">报酬单价</label>
+                            <input type="number" value={price} onChange={e=>setPrice(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="0"/>
+                        </div>
+                        <button onClick={handleSave} className="nook-btn w-full mt-4">保存记录</button>
+                    </div>
+                </div>
+            );
+            
+            return (
+                <div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full">
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-[#805AD5] rounded-full flex items-center justify-center text-white">
+                                <Icon path={Icons.Mic} />
+                            </div>
+                            <h2 className="text-xl font-black opacity-80">录音助手</h2>
+                        </div>
+                        {/* 月份切换 */}
+                        <div className="flex items-center bg-white/50 rounded-full px-1 py-1 backdrop-blur-sm">
+                            <button onClick={prevMonth} className="p-1.5 hover:bg-white/80 rounded-full text-gray-600 transition-colors">
+                                <Icon path={Icons.ChevronLeft} size={16}/>
+                            </button>
+                            <span className="text-xs font-bold text-[#59584D] mx-2 min-w-[60px] text-center">
+                                {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
+                            </span>
+                            <button onClick={nextMonth} className="p-1.5 hover:bg-white/80 rounded-full text-gray-600 transition-colors">
+                                <Icon path={Icons.ChevronRight} size={16}/>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {/* 统计卡片 */}
+                    <div className="bg-[#2D3748] rounded-[24px] p-5 text-white shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0 transition-transform hover:scale-[1.02]">
+                        <div className="absolute right-0 bottom-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mb-6"></div>
+                        <div>
+                            <div className="text-[10px] font-bold opacity-50 mb-1 uppercase">Pending ({currentMonth.getMonth()+1}月)</div>
+                            <div className="text-2xl font-black text-[#F6AD55] tracking-wide">{monthlyData.pending.toLocaleString()}</div>
+                        </div>
+                        <div className="text-right">
+                            <div>
+                                <div className="text-[10px] font-bold opacity-50 mb-1 uppercase">Settled ({currentMonth.getMonth()+1}月)</div>
+                                <div className="text-xl font-bold text-[#68D391]">{monthlyData.settled.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </div>
+        
+                    {/* 列表和添加按钮 */}
+                    <button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#805AD5] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#6B46C1] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop">
+                        <Icon path={Icons.Plus} size={18}/> 记一笔
+                    </button>
+                    
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
+                        {monthlyData.list.length === 0 && <div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center"><div className="text-2xl mb-2">🎙️</div>本月暂无工作记录</div>}
+                        {monthlyData.list.map((item, i) => (
+                            <div key={item.id} className={`bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group animate-pop ${item.settled ? 'opacity-60' : ''}`} style={{animationDelay: `${i*50}ms`}}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm transition-colors ${item.settled ? 'bg-green-100 text-green-500' : 'bg-purple-100 text-purple-500'}`}>
+                                        <Icon path={item.settled ? Icons.Check : Icons.Mic} size={18}/>
+                                    </div>
+                                    <div>
+                                        <div className={`font-bold text-sm ${item.settled ? 'line-through text-gray-400' : 'text-[#59584D]'}`}>{item.title}</div>
+                                        <div className="text-[10px] text-gray-400 font-bold">{new Date(item.createdAt).toLocaleDateString()}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className={`font-black ${item.settled ? 'text-gray-400' : 'text-[#805AD5]'}`}>+{item.price.toLocaleString()}</span>
+                                    <button onClick={()=>toggleSettled(item.id)} className={`p-2 rounded-full border-2 transition-all ${item.settled ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 text-gray-300 hover:border-[#805AD5] hover:text-[#805AD5]'}`}>
+                                        <Icon path={Icons.Check} size={14}/>
+                                    </button>
+                                    <button onClick={()=>deleteWork(item.id)} className="text-gray-300 hover:text-red-400 transition">
+                                        <Icon path={Icons.Trash} size={14}/>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
         };
         
 // ==========================================
@@ -2283,8 +2404,59 @@ const App = () => {
 
     const ledgerActions = { addRecord: async (type, amount, cat, note) => { const Ledger = AV.Object.extend('NookLedger'); const l = new Ledger(); l.set('user', localUser); l.set('type', type); l.set('amount', amount); l.set('category', cat); l.set('note', note); l.set('date', new Date().toLocaleDateString()); l.set('timestamp', Date.now()); const tempId = 'temp_' + Date.now(); const optim = { id: tempId, type, amount, category: cat, note, date: new Date().toLocaleDateString(), timestamp: Date.now() }; setLedger(prev => [optim, ...prev]); try { const saved = await l.save(); setLedger(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {} }, deleteRecord: async (id) => { setLedger(prev => prev.filter(x => x.id !== id)); try { const obj = AV.Object.createWithoutData('NookLedger', id); await obj.destroy(); } catch(e) {} } };
     const fitnessActions = { updateProfile: async (p) => { setFitProfile(p); try { const f = AV.Object.createWithoutData('NookFitProfile', fitProfile.id); f.set('height', p.height); f.set('weight', p.weight); f.set('age', p.age); f.set('gender', p.gender); await f.save(); } catch(e) {} }, addLog: async (type, val, note) => { const Log = AV.Object.extend('NookFitLog'); const l = new Log(); l.set('user', localUser); l.set('type', type); l.set('val', val); l.set('note', note); l.set('date', new Date().toLocaleDateString()); l.set('timestamp', Date.now()); l.set('time', new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})); const tempId = 'temp_'+Date.now(); const optim = { id: tempId, type, val, note, date: new Date().toLocaleDateString(), timestamp: Date.now(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }; setFitLogs(prev => [optim, ...prev]); try { const saved = await l.save(); setFitLogs(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {} } };
-    const voiceWorkActions = { addWork: async (title, price) => { const Work = AV.Object.extend('NookVoiceWork'); const w = new Work(); w.set('user', localUser); w.set('title', title); w.set('price', Number(price)); w.set('settled', false); w.set('createdAt', new Date()); const tempId = 'temp_'+Date.now(); const optim = { id: tempId, title, price: Number(price), settled: false, createdAt: new Date().toISOString() }; setVoiceWorks(prev => [optim, ...prev]); try { const saved = await w.save(); setVoiceWorks(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {} }, toggleSettled: async (id) => { const w = voiceWorks.find(x => x.id === id); if(!w) return; setVoiceWorks(prev => prev.map(x => x.id === id ? { ...x, settled: !x.settled } : x)); try { const obj = AV.Object.createWithoutData('NookVoiceWork', id); obj.set('settled', !w.settled); await obj.save(); } catch(e) {} }, deleteWork: async (id) => { setVoiceWorks(prev => prev.filter(x => x.id !== id)); try { const obj = AV.Object.createWithoutData('NookVoiceWork', id); await obj.destroy(); } catch(e) {} } };
-    const financeActions = { updateStats: async (newStats) => { setStats(prev => ({...prev, ...newStats})); try { const s = AV.Object.createWithoutData('NookStats', stats.id); if(newStats.pocket!==undefined)s.set('pocket', newStats.pocket); if(newStats.savings!==undefined)s.set('savings', newStats.savings); if(newStats.loan!==undefined)s.set('loan', newStats.loan); await s.save(); } catch(e) {} } };
+    // ... (在其他 actions 定义之后)
+const voiceWorkActions = { 
+    addWork: async (title, price) => { 
+        const Work = AV.Object.extend('NookVoiceWork'); 
+        const w = new Work(); 
+        const numericPrice = Number(price);
+
+        w.set('user', localUser); 
+        w.set('title', title); 
+        w.set('price', numericPrice); 
+        w.set('settled', false); 
+        
+        // 使用一个临时 ID 进行乐观更新
+        const tempId = 'temp_'+Date.now(); 
+        const optim = { 
+            id: tempId, 
+            title, 
+            price: numericPrice, 
+            settled: false, 
+            createdAt: new Date().toISOString() 
+        }; 
+        setVoiceWorks(prev => [optim, ...prev]); 
+        
+        try { 
+            const saved = await w.save(); 
+            // 成功后，用真实的 ID 替换临时 ID
+            setVoiceWorks(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); 
+        } catch(e) {
+            console.error("保存录音工作失败", e);
+            // 失败后，移除乐观更新的临时记录
+            setVoiceWorks(prev => prev.filter(x => x.id !== tempId));
+        }
+    }, 
+    toggleSettled: async (id) => { 
+        const w = voiceWorks.find(x => x.id === id); 
+        if(!w) return; 
+        setVoiceWorks(prev => prev.map(x => x.id === id ? { ...x, settled: !x.settled } : x)); 
+        try { 
+            const obj = AV.Object.createWithoutData('NookVoiceWork', id); 
+            obj.set('settled', !w.settled); 
+            await obj.save(); 
+        } catch(e) {} 
+    }, 
+    deleteWork: async (id) => { 
+        setVoiceWorks(prev => prev.filter(x => x.id !== id)); 
+        try { 
+            const obj = AV.Object.createWithoutData('NookVoiceWork', id); 
+            await obj.destroy(); 
+        } catch(e) {} 
+    } 
+};
+// ...
+	const financeActions = { updateStats: async (newStats) => { setStats(prev => ({...prev, ...newStats})); try { const s = AV.Object.createWithoutData('NookStats', stats.id); if(newStats.pocket!==undefined)s.set('pocket', newStats.pocket); if(newStats.savings!==undefined)s.set('savings', newStats.savings); if(newStats.loan!==undefined)s.set('loan', newStats.loan); await s.save(); } catch(e) {} } };
     const decisionActions = { addOption: async (name) => { const Option = AV.Object.extend('NookDecisionOption'); const o = new Option(); o.set('user', localUser); o.set('name', name); const tempId = 'temp_' + Date.now(); const optim = { id: tempId, name }; setDecisionOptions(prev => [optim, ...prev]); try { const saved = await o.save(); setDecisionOptions(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {} }, deleteOption: async (id) => { setDecisionOptions(prev => prev.filter(x => x.id !== id)); try { const obj = AV.Object.createWithoutData('NookDecisionOption', id); await obj.destroy(); } catch(e) {} } };
     const passportActions = { updatePassport: async (newPassport) => { setPassport(newPassport); try { const p = AV.Object.createWithoutData('NookPassport', passport.id); p.set('title1', newPassport.title1); p.set('title2', newPassport.title2); p.set('islandName', newPassport.islandName); p.set('fruit', newPassport.fruit); p.set('birthday', newPassport.birthday); p.set('comment', newPassport.comment); await p.save(); showFeedback("护照信息已更新！"); } catch(e) {} } };
 
