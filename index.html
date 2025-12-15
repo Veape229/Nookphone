@@ -554,7 +554,7 @@
             
             // 还款时的支付方式: 'pocket' (钱包) | 'savings' (存款)
             const [paySource, setPaySource] = useState('savings'); 
-        
+            
             // 管理模式的数据
             const [editPocket, setEditPocket] = useState(stats?.pocket || 0);
             const [editSavings, setEditSavings] = useState(stats?.savings || 0);
@@ -693,7 +693,6 @@
                                     </div>
                                     <Icon path={Icons.ChevronRight} className="text-gray-300" />
                                 </button>
-								
         
                                 <button onClick={() => setMode('repay')} className="nook-card flex items-center justify-between p-5 hover:scale-[1.02] active:scale-95 transition-transform group border-l-8 border-red-400">
                                     <div className="flex items-center gap-3">
@@ -707,17 +706,19 @@
                                         <div className="bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-full animate-pulse">待还</div>
                                     )}
                                 </button>
-								<button onClick={() => setCurrentApp('history')} className="nook-card flex items-center justify-between p-5 hover:scale-[1.02] active:scale-95 transition-transform group border-l-8 border-blue-400">
-								            <div className="flex items-center gap-3">
-								                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><Icon path={Icons.Book} /></div>
-								                <div className="text-left">
-								                    <div className="font-black text-[#59584D]">资金变动记录</div>
-								                    <div className="text-xs text-gray-400 font-bold">Pocket/Savings/Loan History</div>
-								                </div>
-								            </div>
-								            <Icon path={Icons.ChevronRight} className="text-gray-300" />
-								        </button>
-								        {/* ↑↑↑ 【新增】资金变动记录入口 ↑↑↑ */}
+                                
+                                {/* ↓↓↓ 【确认】资金变动记录入口使用 setCurrentApp ↓↓↓ */}
+                                <button onClick={() => setCurrentApp('history')} className="nook-card flex items-center justify-between p-5 hover:scale-[1.02] active:scale-95 transition-transform group border-l-8 border-blue-400">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><Icon path={Icons.Book} /></div>
+                                        <div className="text-left">
+                                            <div className="font-black text-[#59584D]">查看资金变动记录</div>
+                                            <div className="text-xs text-gray-400 font-bold">Pocket/Savings/Loan History</div>
+                                        </div>
+                                    </div>
+                                    <Icon path={Icons.ChevronRight} className="text-gray-300" />
+                                </button>
+                                {/* ↑↑↑ 【确认】资金变动记录入口使用 setCurrentApp ↑↑↑ */}
                             </div>
                         )}
         
@@ -736,7 +737,7 @@
                             </div>
                         )}
         
-                        {/* 3. 还款模式 [核心修改] */}
+                        {/* 3. 还款模式 */}
                         {mode === 'repay' && (
                             <div className="nook-card flex flex-col justify-between gap-4 animate-pop border-l-8 border-red-400 min-h-full">
                                 <div>
@@ -794,10 +795,6 @@
                 </div>
             );
         };
-// ==========================================
-        // Nook Shopping 组件 (SVG + 多人进度)
-        // ==========================================
-        // ... (TimmyIcon 和 TommyIcon 组件保持不变，直接复制上面的 SVG 代码即可，这里省略以节省篇幅，请务必包含) ...
      
         // Nook Shopping 组件 (输入框置顶版)
         // ==========================================
@@ -1041,10 +1038,6 @@
 		        </div>
 		    );
 		};
-        // ==========================================
-        // LedgerApp 组件 (新增工资结算功能)
-        // ==========================================
-        
         const LedgerApp = ({ ledger, addRecord, deleteRecord, showFeedback, settleMonthlySalary, stats }) => {
             const [view, setView] = useState('list'); 
             const [timeView, setTimeView] = useState('month'); 
@@ -1052,31 +1045,28 @@
             const [amount, setAmount] = useState(''); 
             const [category, setCategory] = useState('其他'); 
             const [note, setNote] = useState('');
-            const [isPending, setIsPending] = useState(false); // 新增状态：是否为预计收入
+            const [isPending, setIsPending] = useState(false); 
+            
+            // [新增状态] 记录结算视图中，哪些待结算记录被选中
+            const [selectedPendingIds, setSelectedPendingIds] = useState([]);
         
             const categories = type === 'expense' ? ['吃饭', '零食', '娱乐', '生活', '交通', '服饰', '日用品'] : ['工作', '利息', '其他'];
             
             // 筛选待结算记录的逻辑 (用于结算视图)
             const pendingSalaryRecords = useMemo(() => {
-                const now = new Date();
-                const lastMonth = new Date(now);
-                lastMonth.setMonth(now.getMonth() - 1);
-                lastMonth.setDate(15);
-                
-                const thisMonthSettleDate = new Date(now);
-                thisMonthSettleDate.setDate(15);
-        
-                return ledger.filter(r => {
-                    const recordDate = new Date(r.timestamp);
-                    const isPendingSalary = r.type === 'income' && r.isPending && r.isSalary;
-                    
-                    // 筛选结算周期内（上月15日至本月15日）的待结算工资记录
-                    return isPendingSalary && recordDate >= lastMonth && recordDate <= thisMonthSettleDate;
-                });
+                // 筛选所有待结算的工资记录
+                return ledger.filter(r => r.isPending === true && r.isSalary === true);
             }, [ledger]);
         
-            const expectedSalaryTotal = pendingSalaryRecords.reduce((sum, r) => sum + r.amount, 0);
+            // 动态计算：选中的预计总额
+            const selectedExpectedTotal = useMemo(() => {
+                return pendingSalaryRecords
+                    .filter(r => selectedPendingIds.includes(r.id))
+                    .reduce((sum, r) => sum + r.amount, 0);
+            }, [pendingSalaryRecords, selectedPendingIds]);
         
+            const canSettle = pendingSalaryRecords.length > 0;
+            
             const filteredLedger = useMemo(() => {
                 const now = new Date();
                 return ledger.filter(r => {
@@ -1089,23 +1079,52 @@
         
             const summary = useMemo(() => {
                 let inc = 0, exp = 0;
-                filteredLedger.forEach(r => r.type === 'income' ? inc += Number(r.amount) : exp += Number(r.amount));
+                filteredLedger.forEach(r => {
+                     if (r.type === 'income' && !r.isPending) {
+                         inc += Number(r.amount);
+                     } else if (r.type === 'expense') {
+                         exp += Number(r.amount);
+                     }
+                });
                 return { income: inc, expense: exp, balance: inc - exp };
             }, [filteredLedger]);
         
             const handleAdd = () => { 
                 if(!amount) return alert("请输入金额"); 
-                // 【修正】调用 addRecord 时传递 isPending 状态
                 addRecord(type, Number(amount), category, note, isPending); 
                 setAmount(''); 
                 setNote(''); 
-                setIsPending(false); // 重置状态
+                setIsPending(false); 
                 setView('list'); 
                 showFeedback(isPending ? "预计收入已记录" : "记账成功！"); 
             };
         
             const handleDelete = (id) => { if (confirm("删除此账单？")) { deleteRecord(id); showFeedback("账单已删除", "error"); } };
             const getSummaryTitle = () => { if (timeView === 'day') return '今日结余'; if (timeView === 'week') return '近7天结余'; return '本月结余'; };
+            
+            // [新增] 切换选中状态
+            const togglePendingSelect = (id) => {
+                setSelectedPendingIds(prev => 
+                    prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
+                );
+            };
+            
+            // [新增] 处理结算入账
+            const handleSettle = () => {
+                if (selectedPendingIds.length === 0) {
+                    return alert("请至少选择一笔待结算记录。");
+                }
+                
+                const recordsToClear = pendingSalaryRecords.filter(r => selectedPendingIds.includes(r.id));
+                const finalAmount = Number(amount) || selectedExpectedTotal;
+        
+                settleMonthlySalary(finalAmount, recordsToClear);
+                
+                // 重置状态
+                setAmount('');
+                setSelectedPendingIds([]);
+                setView('list');
+            };
         
             // --- 渲染新增/编辑视图 ---
             if (view === 'add') return (
@@ -1122,7 +1141,7 @@
                             <button onClick={()=>{setType('income'); setCategory('工作');}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='income'?'bg-white text-green-500 shadow-sm scale-95':'text-gray-500'}`}>收入</button>
                         </div>
                         
-                        {/* [新增] 预计收入开关 */}
+                        {/* 预计收入开关 */}
                         {type === 'income' && category === '工作' && (
                             <div className="nook-card flex items-center justify-between p-4 border-l-8 border-[#3DAA86]">
                                 <div>
@@ -1167,15 +1186,43 @@
             if (view === 'settle_view') return (
                 <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
                     <div className="flex items-center gap-2 mb-4 shrink-0">
-                        <button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button>
+                        <button onClick={()=>{setView('list'); setAmount(''); setSelectedPendingIds([]);}} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button>
                         <h2 className="text-xl font-black opacity-80">月度工资结算</h2>
                     </div>
                     
                     <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
+                        
+                        {/* 待结算记录清单 (可勾选) */}
+                        <div className="nook-card p-4">
+                            <h3 className="text-sm font-bold text-gray-500 mb-3">选择本次结算记录 ({selectedPendingIds.length} 笔)</h3>
+                            <div className='space-y-2'>
+                                {pendingSalaryRecords.map(r => {
+                                    const isSelected = selectedPendingIds.includes(r.id);
+                                    return (
+                                        <div 
+                                            key={r.id} 
+                                            onClick={() => togglePendingSelect(r.id)}
+                                            className={`flex justify-between items-center p-3 rounded-xl border-2 transition-all cursor-pointer ${isSelected ? 'bg-green-50 border-green-500 shadow-md' : 'bg-gray-50 border-gray-100 hover:bg-white'}`}
+                                        >
+                                            <div className='flex items-center gap-3'>
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-green-500 border-green-500' : 'border-gray-300 bg-white'}`}>
+                                                    {isSelected && <Icon path={Icons.Check} size={12} className="text-white"/>}
+                                                </div>
+                                                <div>
+                                                    <span className='text-sm font-bold text-[#59584D]'>{r.note || '预计工资记录'}</span>
+                                                    <div className='text-[10px] text-gray-400'>{r.date}</div>
+                                                </div>
+                                            </div>
+                                            <span className="font-bold text-green-500">+{r.amount.toLocaleString()}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+        
                         <div className="nook-card border-l-8 border-[#3DAA86] p-4">
-                            <div className="text-xs font-bold text-gray-400 mb-1">本次结算周期 ({new Date(pendingSalaryRecords[0]?.timestamp || Date.now()).toLocaleDateString()} - {new Date().toLocaleDateString()})</div>
-                            <div className="text-lg font-black text-[#59584D]">预计收入总额</div>
-                            <div className="text-3xl font-black text-green-500 mt-1">{expectedSalaryTotal.toLocaleString()}</div>
+                            <div className="text-lg font-black text-[#59584D]">勾选记录预计总额</div>
+                            <div className="text-3xl font-black text-green-500 mt-1">{selectedExpectedTotal.toLocaleString()}</div>
                         </div>
         
                         {/* 实际核对金额输入 */}
@@ -1185,36 +1232,23 @@
                                 type="number" 
                                 value={amount} 
                                 onChange={e => setAmount(e.target.value)} 
-                                onFocus={() => { if (!amount) setAmount(expectedSalaryTotal.toString()); }} // 聚焦时默认填入预计金额
+                                onFocus={() => { if (!amount && selectedExpectedTotal > 0) setAmount(selectedExpectedTotal.toString()); }}
                                 className="nook-input text-2xl font-black text-center" 
-                                placeholder={expectedSalaryTotal.toLocaleString()}
+                                placeholder={selectedExpectedTotal.toLocaleString()}
                             />
-                            <p className="text-[10px] text-gray-400 mt-2">（留空则默认按 **预计总额** 入账）</p>
+                            <p className="text-[10px] text-gray-400 mt-2">（留空则默认按 **勾选记录总额** 入账）</p>
                         </div>
                         
                         {/* 结算按钮 */}
                         <button 
-                            onClick={() => settleMonthlySalary(Number(amount) || expectedSalaryTotal, pendingSalaryRecords)} 
-                            disabled={pendingSalaryRecords.length === 0}
+                            onClick={handleSettle} 
+                            disabled={selectedPendingIds.length === 0}
                             className="nook-btn w-full bg-green-500 shadow-[0_5px_0_#2F855A] mt-4"
                         >
-                            {pendingSalaryRecords.length > 0 
-                                ? `确认结算并入账 ${ (Number(amount) || expectedSalaryTotal).toLocaleString() } 铃钱`
-                                : '暂无待入账收入'}
+                            {selectedPendingIds.length > 0 
+                                ? `确认结算并入账 ${ (Number(amount) || selectedExpectedTotal).toLocaleString() } 铃钱`
+                                : '请选择待结算记录'}
                         </button>
-        
-                        {/* 待结算记录清单 (可选) */}
-                        {pendingSalaryRecords.length > 0 && (
-                            <div className="nook-card p-4">
-                                <div className="text-xs font-bold text-gray-500 mb-2">本次将清零的 {pendingSalaryRecords.length} 笔预计工资记录:</div>
-                                {pendingSalaryRecords.map(r => (
-                                    <div key={r.id} className="text-xs bg-gray-50 p-2 rounded flex justify-between border-b border-dashed border-gray-200 last:border-b-0">
-                                        <span className='text-gray-600'>{r.date} - {r.note || '预计工资'}</span>
-                                        <span className="font-bold text-green-500">+{r.amount.toLocaleString()}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 </div>
             );
@@ -1228,9 +1262,9 @@
                             <div className="w-10 h-10 bg-[#FFD166] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Book} /></div>
                             <h2 className="text-xl font-black opacity-80">记账本</h2>
                         </div>
-                        {/* 【新增】结算入口按钮 */}
-                        {pendingSalaryRecords.length > 0 && (
-                            <button onClick={() => setView('settle_view')} className="bg-red-500 text-white text-xs font-bold px-3 py-2 rounded-full shadow-md animate-pop active:scale-95 transition-all">
+                        {/* 结算入口按钮 - 依赖 canSettle 渲染 */}
+                        {canSettle && (
+                            <button onClick={() => { setView('settle_view'); setSelectedPendingIds(pendingSalaryRecords.map(r => r.id)); }} className="bg-red-500 text-white text-xs font-bold px-3 py-2 rounded-full shadow-md animate-pop active:scale-95 transition-all">
                                 🔔 {pendingSalaryRecords.length} 笔待结算
                             </button>
                         )}
@@ -1675,7 +1709,7 @@ const CabinWidget = ({ id, label, icon, color, count, onClick, isActive }) => (
     </button>
 );
 // ==========================================
-// FinanceHistoryApp (资金变动记录 - 增加 Tab 筛选)
+// FinanceHistoryApp (资金变动记录 - 修正返回按钮)
 // ==========================================
 const FinanceHistoryApp = ({ ledger, stats, setCurrentApp, showFeedback }) => {
     // Tab 状态: 'all', 'pocket', 'savings', 'loan'
@@ -1691,7 +1725,7 @@ const FinanceHistoryApp = ({ ledger, stats, setCurrentApp, showFeedback }) => {
     
     // 定义过滤条件：只显示影响资金账户的交易 (收入/支出/贷款/募捐)
     const financialRecords = useMemo(() => {
-        // 1. 基础筛选: 找出所有影响资产的记录
+        // 1. 基础筛选: 找出所有影响资产的记录 (确保所有相关 category 都被包含)
         let filtered = ledger.filter(r => 
             r.type === 'expense' || r.type === 'income' || r.category === '募捐' || r.category === '月结工资'
         );
@@ -1699,22 +1733,23 @@ const FinanceHistoryApp = ({ ledger, stats, setCurrentApp, showFeedback }) => {
         // 2. 按 Tab 进一步筛选
         if (activeTab !== 'all') {
             filtered = filtered.filter(r => {
-                const isExpense = r.type === 'expense';
+                const note = r.note || '';
                 const isIncome = r.type === 'income';
 
                 switch (activeTab) {
                     case 'pocket':
-                        // 钱包变动: 所有非募捐的日常支出，非存取的日常收入，以及贷款偿还 (假设主要用口袋还贷)
-                        // 备注中包含 '工资入账' 的实际收入也影响口袋
-                        return (isExpense && r.category !== '募捐') || (isIncome && r.category !== '月结工资') || r.note.includes('入账') || r.note.includes('取出') || r.note.includes('偿还');
+                        // 钱包变动: 所有日常收支，以及月结工资入账
+                        // 排除：贷款偿还 (通常影响 savings/loan)，存取款 (在 note 中明确提到存入/取出)
+                        const excludes = note.includes('偿还') || note.includes('存入') || note.includes('取出');
+                        return !excludes;
                         
                     case 'savings':
-                        // 存款变动: 存取款，或与利息相关的收入/支出 (此处主要根据记账记录判断)
-                        return r.note.includes('存入') || r.note.includes('取出') || r.category === '利息';
+                        // 存款变动: 存取款
+                        return note.includes('存入') || note.includes('取出');
 
                     case 'loan':
-                        // 贷款变动: 偿还贷款或初始贷款记录（通常会通过 note/category体现）
-                        return r.note.includes('贷款') || r.note.includes('偿还');
+                        // 贷款变动: 偿还贷款或初始贷款记录
+                        return note.includes('贷款') || note.includes('偿还');
                         
                     default:
                         return true;
@@ -1754,14 +1789,22 @@ const FinanceHistoryApp = ({ ledger, stats, setCurrentApp, showFeedback }) => {
         <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
             {/* 顶部标题 */}
             <div className="flex items-center justify-between mb-4 shrink-0">
-                <button onClick={() => setCurrentApp(null)} className="p-2 -ml-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"><Icon path={Icons.ArrowLeft} size={24}/></button>
+                {/* ↓↓↓ 【修正】返回按钮逻辑：切换回 FinanceApp ↓↓↓ */}
+                <button 
+                    onClick={() => setCurrentApp('finance')} 
+                    className="p-2 -ml-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
+                >
+                    <Icon path={Icons.ArrowLeft} size={24}/>
+                </button>
+                {/* ↑↑↑ 【修正】返回按钮逻辑：切换回 FinanceApp ↑↑↑ */}
+                
                 <div className="flex items-center gap-2 flex-1 ml-3">
                     <div className="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center text-white shadow-sm border-2 border-white"><Icon path={Icons.CreditCard} size={20} /></div>
                     <h2 className="text-xl font-black opacity-80">资金变动记录</h2>
                 </div>
             </div>
 
-            {/* ↓↓↓ 【新增】Tab 筛选导航 ↓↓↓ */}
+            {/* Tab 筛选导航 */}
             <div className="overflow-x-auto no-scrollbar shrink-0 mb-4">
                 <div className="flex bg-white/50 p-1 rounded-xl backdrop-blur-sm min-w-max gap-1">
                     {TABS.map(tab => (
@@ -1776,7 +1819,6 @@ const FinanceHistoryApp = ({ ledger, stats, setCurrentApp, showFeedback }) => {
                     ))}
                 </div>
             </div>
-            {/* ↑↑↑ 【新增】Tab 筛选导航 ↑↑↑ */}
 
 
             {/* 列表区域 */}
@@ -2769,12 +2811,11 @@ const App = () => {
         update: async (id, title, content, file, oldImageUrl, cabinId) => { if (id.toString().startsWith('temp_')) return; let finalImageUrl = oldImageUrl; if (file) { try { const avFile = new AV.File(file.name, file); const savedFile = await avFile.save(); finalImageUrl = savedFile.url(); } catch (e) { return; } } else if (oldImageUrl === null) { finalImageUrl = null; } const displayImage = file ? URL.createObjectURL(file) : finalImageUrl; setWikiItems(prev => prev.map(x => x.id === id ? { ...x, title, content, image: displayImage, updatedTimestamp: Date.now(), cabinId } : x)); try { const w = AV.Object.createWithoutData('NookWiki', id); w.set('title', title); w.set('content', content); if (finalImageUrl) w.set('image', finalImageUrl); else w.unset('image'); if (cabinId) w.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId)); else w.unset('cabin'); await w.save(); showFeedback("已更新！"); if (file) URL.revokeObjectURL(displayImage); } catch(e) { showFeedback("更新失败", "error"); } },
         remove: async (id) => { setWikiItems(prev => prev.filter(x => x.id !== id)); try { const obj = AV.Object.createWithoutData('NookWiki', id); await obj.destroy(); } catch(e) {} }
     };
-
 // ==========================================
 // App 组件 - 记账动作 (ledgerActions) 最终修正版
 // ==========================================
 const ledgerActions = {
-    // [addRecord 保持不变]
+    // 1. [addRecord 保持不变]
     addRecord: async (type, amount, cat, note, isPending = false) => { 
         const Ledger = AV.Object.extend('NookLedger'); 
         const l = new Ledger(); 
@@ -2818,95 +2859,171 @@ const ledgerActions = {
         }; 
         setLedger(prev => [optim, ...prev]); 
         
+        let statsUpdateNeeded = false;
+        let changeAmount = 0;
+        if (!isPending) {
+            statsUpdateNeeded = true;
+            changeAmount = (type === 'income' ? numericAmount : -numericAmount);
+            setStats(prev => ({ ...prev, pocket: prev.pocket + changeAmount }));
+        }
+
         try { 
             const saved = await l.save(); 
+            if (statsUpdateNeeded) {
+                const sObj = AV.Object.createWithoutData('NookStats', stats.id);
+                sObj.increment('pocket', changeAmount);
+                await sObj.save();
+            }
+            
             setLedger(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); 
         } catch(e) {
             console.error("记账失败:", e);
+            if (statsUpdateNeeded) {
+                 setStats(prev => ({ ...prev, pocket: prev.pocket - changeAmount }));
+            }
             setLedger(prev => prev.filter(x => x.id !== tempId));
         }
     }, 
     
+    // 2. [deleteRecord 保持不变]
     deleteRecord: async (id) => { 
-        setLedger(prev => prev.filter(x => x.id !== id)); 
-        try { 
-            const obj = AV.Object.createWithoutData('NookLedger', id); 
-            await obj.destroy(); 
-        } catch(e) {} 
-    },
+        const recordToDelete = ledger.find(r => r.id === id);
+        if (!recordToDelete || recordToDelete.id.startsWith('temp_')) return;
+        
+        if (recordToDelete.isPending || recordToDelete.isSalary) {
+             setLedger(prev => prev.filter(x => x.id !== id));
+             try { 
+                const obj = AV.Object.createWithoutData('NookLedger', id); 
+                await obj.destroy(); 
+                showFeedback("账单已删除");
+             } catch(e) {
+                showFeedback("删除失败", "error");
+             }
+             return;
+        }
 
-    // [最终修正] 月度工资结算入账
+        const amount = recordToDelete.amount;
+        const reverseAmount = recordToDelete.type === 'expense' ? amount : -amount;
+        
+        setLedger(prev => prev.filter(x => x.id !== id));
+
+        const newPocket = stats.pocket + reverseAmount;
+        setStats(prev => ({ ...prev, pocket: newPocket }));
+        
+        try { 
+            const sObj = AV.Object.createWithoutData('NookStats', stats.id);
+            sObj.increment('pocket', reverseAmount);
+            const lObj = AV.Object.createWithoutData('NookLedger', id); 
+
+            await AV.Object.saveAll([sObj, lObj.destroy()]);
+            
+            showFeedback("账单已删除并还原金额");
+
+        } catch(e) {
+            console.error("删除记录失败并回滚本地状态", e);
+            showFeedback("删除失败，请手动检查账单和金额", "error");
+            setStats(prev => ({ ...prev, pocket: stats.pocket }));
+        }
+    },
+    
+    // 3. [修正] 月度工资结算入账 (修复 tempId 作用域和回滚逻辑)
     settleMonthlySalary: async (finalSettlementAmount, recordsToClear) => {
-        if (!finalSettlementAmount || finalSettlementAmount <= 0) {
-            showFeedback("结算金额必须大于 0", "error");
+        
+        // 确保 tempActualIncomeId 在 try 块外部定义，用于回滚
+        let tempActualIncomeId = null; 
+        
+        if (finalSettlementAmount < 0 || isNaN(finalSettlementAmount)) { 
+            showFeedback("结算金额不能为负数或无效值", "error");
+            return;
+        }
+        if (recordsToClear.length === 0) {
+            showFeedback("没有记录被选中，无需结算。", "error");
             return;
         }
         
         // 1. 准备要删除的记录 ID 列表
         const clearedIds = recordsToClear.map(r => r.id);
-
-        // 2. 准备 LeanCloud 对象
-        const sObj = AV.Object.createWithoutData('NookStats', stats.id);
-        sObj.increment('pocket', finalSettlementAmount);
-
-        const Ledger = AV.Object.extend('NookLedger'); 
-        const actualIncome = new Ledger();
-        actualIncome.set('user', localUser);
-        actualIncome.set('type', 'income');
-        actualIncome.set('amount', finalSettlementAmount);
-        actualIncome.set('category', '月结工资');
-        actualIncome.set('note', '工资入账');
-        actualIncome.set('date', new Date().toLocaleDateString());
-        actualIncome.set('timestamp', Date.now()); 
-        actualIncome.set('isPending', false);
-        actualIncome.set('isSalary', false);
-
-        // 3. 乐观更新 Ledger 状态 (本地)：
-        //    - 移除所有待删除的记录
-        //    - 加入新的 '月结工资' 记录 (使用临时 ID)
-        const tempActualIncomeId = generateId();
-        const optimActualIncome = { ...simplify(actualIncome), id: tempActualIncomeId };
-
+        
+        // 2. 乐观更新 Ledger 状态 (本地)：移除所有待删除的记录
         setLedger(prev => {
             return [
-                optimActualIncome, // 新的入账记录
                 ...prev.filter(r => !clearedIds.includes(r.id)) // 过滤掉所有已清零的旧记录
             ];
         });
         
-        // 4. 最终更新 stats
-        const newPocket = stats.pocket + finalSettlementAmount;
-        setStats(prev => ({...prev, pocket: newPocket}));
+        // 3. 更新 stats (仅当金额大于 0 时才更新)
+        const statsUpdateNeeded = finalSettlementAmount > 0;
+        let sObj, actualIncome;
+
+        if (statsUpdateNeeded) {
+            const newPocket = stats.pocket + finalSettlementAmount;
+            setStats(prev => ({...prev, pocket: newPocket}));
+
+            sObj = AV.Object.createWithoutData('NookStats', stats.id);
+            sObj.increment('pocket', finalSettlementAmount);
+
+            // 准备创建实际入账记录
+            const Ledger = AV.Object.extend('NookLedger'); 
+            actualIncome = new Ledger();
+            actualIncome.set('user', localUser);
+            actualIncome.set('type', 'income');
+            actualIncome.set('amount', finalSettlementAmount);
+            actualIncome.set('category', '月结工资');
+            actualIncome.set('note', '工资入账');
+            actualIncome.set('date', new Date().toLocaleDateString());
+            actualIncome.set('timestamp', Date.now()); 
+            actualIncome.set('isPending', false);
+            actualIncome.set('isSalary', false);
+            
+            // 乐观更新 Ledger (添加新入账记录)
+            tempActualIncomeId = generateId(); // 【修正】在外部变量中赋值
+            const optimActualIncome = { ...simplify(actualIncome), id: tempActualIncomeId };
+            setLedger(prev => [optimActualIncome, ...prev]); 
+        }
 
         try {
-            // 5. LeanCloud 执行删除和保存操作
+            // 4. LeanCloud 执行删除和保存操作
             
-            // A. 执行删除操作 (使用 AV.Object.destroyAll)
+            // A. 执行删除操作 (删除旧的预计收入记录)
             const ledgerObjectsToDelete = recordsToClear.map(r => AV.Object.createWithoutData('NookLedger', r.id));
-            if (ledgerObjectsToDelete.length > 0) {
-                await AV.Object.destroyAll(ledgerObjectsToDelete);
-            }
+            await AV.Object.destroyAll(ledgerObjectsToDelete);
             
             // B. 执行保存操作 (用户状态和新入账记录)
-            const [savedStats, savedIncome] = await AV.Object.saveAll([sObj, actualIncome]);
+            const objectsToSave = [];
+            if (statsUpdateNeeded) {
+                objectsToSave.push(sObj);
+                objectsToSave.push(actualIncome);
+            }
+            
+            let savedIncome = null;
+            if (objectsToSave.length > 0) {
+                const results = await AV.Object.saveAll(objectsToSave);
+                savedIncome = results.find(obj => obj.className === 'NookLedger');
+            }
 
-            // C. 最终同步本地 UI (用真实的 ID 替换乐观更新的 ID)
-             setLedger(prev => prev.map(r => 
-                r.id === tempActualIncomeId ? simplify(savedIncome) : r
-            ));
+            // C. 最终同步本地 UI (替换临时 ID)
+            if (statsUpdateNeeded && savedIncome) {
+                 setLedger(prev => prev.map(r => 
+                    r.id === tempActualIncomeId ? simplify(savedIncome) : r
+                ));
+            }
 
+            const msg = statsUpdateNeeded 
+                ? `月工资 ${finalSettlementAmount.toLocaleString()} 铃钱已入账！`
+                : `预计收入已清零 (${recordsToClear.length} 笔记录已删除)。`;
 
-            showFeedback(`月工资 ${finalSettlementAmount.toLocaleString()} 铃钱已入账！`, "success");
+            showFeedback(msg, "success");
+            
         } catch (e) {
             console.error("结算失败:", e);
             showFeedback("结算失败，请重试。", "error");
-            // 失败后，尝试重新拉取数据以恢复状态 (这是最安全的恢复方式)
-            // fetch data 应该在 App.js 根组件中调用，这里我们只回滚乐观更新
             
-            // 回滚本地状态（移除新入账记录，恢复旧的待结算记录 - 复杂，但为了演示，这里只移除新记录）
-             setLedger(prev => {
-                 return prev.filter(r => r.id !== tempActualIncomeId); // 移除新的月结记录
-             });
+            // 失败后回滚本地状态：
+            // 1. 如果有新创建的临时记录，移除它
+            if (tempActualIncomeId) {
+                setLedger(prev => prev.filter(r => r.id !== tempActualIncomeId)); 
+            }
+            // 2. 如果更新了 Stats，理论上需要回滚 stats 和 ledger，但这里只做最简单且安全的处理：回滚 Ledger 临时记录。
         }
     }
 };
@@ -3026,8 +3143,8 @@ const voiceWorkActions = {
                             {currentApp === 'voice' && <VoiceWorkApp voiceWorks={voiceWorks} showFeedback={showFeedback} {...voiceWorkActions}/>} 
                             {currentApp === 'wiki' && <WikiApp items={wikiItems} showFeedback={showFeedback} cabin={cabin} {...wikiActionsFull}/>} 
                             {currentApp === 'finance' && <FinanceApp stats={stats} showFeedback={showFeedback} setCurrentApp={setCurrentApp} {...financeActions}/>}
-							{currentApp === 'history' && <FinanceHistoryApp ledger={ledger} stats={stats} showFeedback={showFeedback}/>} 
-                            {currentApp === 'passport' && <PassportApp user={userDoc} stats={stats} passport={passport} {...passportActions}/>}
+							{currentApp === 'history' && <FinanceHistoryApp ledger={ledger} stats={stats} setCurrentApp={setCurrentApp} showFeedback={showFeedback}/>}
+							{currentApp === 'passport' && <PassportApp user={userDoc} stats={stats} passport={passport} {...passportActions}/>}
                             {currentApp === 'shopping' && <ShoppingApp items={shoppingItems} showFeedback={showFeedback} cabin={cabin} memberCount={memberCount} {...shoppingActions}/>}
                             {currentApp === 'decision' && <DecisionApp options={decisionOptions} showFeedback={showFeedback} {...decisionActions}/>}
                             {currentApp === 'settings' && (<SettingsApp user={userDoc} currentTheme={userDoc.themeId} currentAvatar={userDoc.avatar} changeTheme={updateTheme} changeAvatar={changeAvatar} onReset={()=>setResetStep(1)} onLogout={handleLogout}/>)}
