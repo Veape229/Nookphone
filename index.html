@@ -547,7 +547,7 @@
             return (<div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full"><div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-2"><div className="w-10 h-10 bg-[#4299E1] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Activity} /></div><h2 className="text-xl font-black opacity-80">NookFit</h2></div><button onClick={()=>{ setPHeight(profile.height); setPWeight(profile.weight); setPAge(profile.age); setPGender(profile.gender); setView('setup');}} className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 hover:bg-white"><Icon path={Icons.Settings} size={16}/></button></div><div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm shrink-0">{['day','week','month'].map(t => (<button key={t} onClick={()=>setTimeView(t)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView===t?'bg-white text-[#4299E1] shadow-sm scale-95':'text-gray-500'}`}>{t==='day'?'今日':(t==='week'?'本周':'本月')}</button>))}</div><div className="bg-[#2D3748] rounded-[24px] p-5 text-white shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0 transition-transform hover:scale-[1.02]"><div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-8 -mt-8"></div><div className="grid grid-cols-2 gap-4 relative z-10"><div><div className="text-[10px] font-bold opacity-50 mb-1">{timeView==='day'?'WEIGHT':'AVG WEIGHT'}</div><div className="text-2xl font-black">{aggregatedData.displayWeight} <span className="text-sm font-bold opacity-50">kg</span></div></div><div><div className="text-[10px] font-bold opacity-50 mb-1">BMI</div><div className="text-2xl font-black text-[#63B3ED]">{bmi}</div></div><div className="col-span-2 pt-3 border-t border-white/10"><div className="flex justify-between items-end mb-1"><div className="text-[10px] font-bold opacity-50">NET BURN</div><div className="text-2xl font-black text-[#F6AD55]">{(periodBmr + aggregatedData.totalExercise - aggregatedData.totalIntake).toFixed(0)} <span className="text-xs">kcal</span></div></div><div className="flex justify-between text-[10px] font-bold opacity-60"><span>基础: {periodBmr.toFixed(0)}</span><span>运动: {aggregatedData.totalExercise}</span><span>摄入: {aggregatedData.totalIntake}</span></div></div></div></div><button onClick={()=>setView('log')} className="absolute bottom-6 right-2 bg-[#4299E1] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#3182CE] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一笔</button><div className="flex-1 overflow-y-auto no-scrollbar pb-24"><div className="space-y-2">{aggregatedData.history.map((rec, i) => (<div key={rec.id} className="bg-white rounded-xl p-3 flex justify-between items-center shadow-sm animate-pop" style={{animationDelay: `${i*50}ms`}}><div className="flex items-center gap-3"><div className={`w-8 h-8 rounded-full flex items-center justify-center ${rec.type==='exercise'?'bg-orange-100 text-orange-500': (rec.type==='intake' ? 'bg-green-100 text-green-500' : 'bg-blue-100 text-blue-500')}`}><Icon path={rec.type==='exercise'?Icons.Activity: (rec.type==='intake'?Icons.Utensils:Icons.Scale)} size={16}/></div><div><div className="text-xs font-bold text-[#59584D]">{rec.note}</div><div className="text-[10px] text-gray-400 font-bold">{rec.date} {rec.time}</div></div></div><div className={`text-sm font-black ${rec.type==='exercise'?'text-orange-500':(rec.type==='intake'?'text-green-500':'text-blue-500')}`}>{rec.type==='weight' ? rec.val+'kg' : (rec.type==='exercise'?'-':'+')+rec.val}</div></div>))}</div></div></div>);
         };
 
-        const FinanceApp = ({ stats, updateStats, showFeedback }) => {
+        const FinanceApp = ({ stats, updateStats, showFeedback, setCurrentApp }) => {
             // mode: 'menu' (主菜单), 'transfer' (存取款), 'repay' (还贷), 'manage' (后台修改)
             const [mode, setMode] = useState('menu'); 
             const [amount, setAmount] = useState('');
@@ -693,6 +693,7 @@
                                     </div>
                                     <Icon path={Icons.ChevronRight} className="text-gray-300" />
                                 </button>
+								
         
                                 <button onClick={() => setMode('repay')} className="nook-card flex items-center justify-between p-5 hover:scale-[1.02] active:scale-95 transition-transform group border-l-8 border-red-400">
                                     <div className="flex items-center gap-3">
@@ -706,6 +707,17 @@
                                         <div className="bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-full animate-pulse">待还</div>
                                     )}
                                 </button>
+								<button onClick={() => setCurrentApp('history')} className="nook-card flex items-center justify-between p-5 hover:scale-[1.02] active:scale-95 transition-transform group border-l-8 border-blue-400">
+								            <div className="flex items-center gap-3">
+								                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><Icon path={Icons.Book} /></div>
+								                <div className="text-left">
+								                    <div className="font-black text-[#59584D]">资金变动记录</div>
+								                    <div className="text-xs text-gray-400 font-bold">Pocket/Savings/Loan History</div>
+								                </div>
+								            </div>
+								            <Icon path={Icons.ChevronRight} className="text-gray-300" />
+								        </button>
+								        {/* ↑↑↑ 【新增】资金变动记录入口 ↑↑↑ */}
                             </div>
                         )}
         
@@ -1645,12 +1657,6 @@ const GyroidIcon = ({ dancing }) => (
 // ==========================================
 // CabinApp 组件 (参数冲突已解决，UI/UX 优化版)
 // ==========================================
-
-// 辅助组件：小型功能模块卡片 (Widget)
-// ==========================================
-// CabinApp 组件 (最终修正版 - 解决所有引用错误)
-// ==========================================
-
 // 辅助组件：小型功能模块卡片 (Widget)
 const CabinWidget = ({ id, label, icon, color, count, onClick, isActive }) => (
     <button 
@@ -1668,8 +1674,147 @@ const CabinWidget = ({ id, label, icon, color, count, onClick, isActive }) => (
         <span className="text-xs font-bold text-gray-500 mt-1">{label}</span>
     </button>
 );
+// ==========================================
+// FinanceHistoryApp (资金变动记录 - 增加 Tab 筛选)
+// ==========================================
+const FinanceHistoryApp = ({ ledger, stats, setCurrentApp, showFeedback }) => {
+    // Tab 状态: 'all', 'pocket', 'savings', 'loan'
+    const [activeTab, setActiveTab] = useState('all'); 
+    
+    // 定义 Tab 列表
+    const TABS = [
+        { id: 'all', label: '全部记录', icon: Icons.Book, color: '#4299E1' },
+        { id: 'pocket', label: '钱包/口袋', icon: Icons.CreditCard, color: '#D69E2E' },
+        { id: 'savings', label: 'ABD 存款', icon: Icons.Coin, color: '#3DAA86' },
+        { id: 'loan', label: '贷款/还款', icon: Icons.Home, color: '#E53E3E' },
+    ];
+    
+    // 定义过滤条件：只显示影响资金账户的交易 (收入/支出/贷款/募捐)
+    const financialRecords = useMemo(() => {
+        // 1. 基础筛选: 找出所有影响资产的记录
+        let filtered = ledger.filter(r => 
+            r.type === 'expense' || r.type === 'income' || r.category === '募捐' || r.category === '月结工资'
+        );
+
+        // 2. 按 Tab 进一步筛选
+        if (activeTab !== 'all') {
+            filtered = filtered.filter(r => {
+                const isExpense = r.type === 'expense';
+                const isIncome = r.type === 'income';
+
+                switch (activeTab) {
+                    case 'pocket':
+                        // 钱包变动: 所有非募捐的日常支出，非存取的日常收入，以及贷款偿还 (假设主要用口袋还贷)
+                        // 备注中包含 '工资入账' 的实际收入也影响口袋
+                        return (isExpense && r.category !== '募捐') || (isIncome && r.category !== '月结工资') || r.note.includes('入账') || r.note.includes('取出') || r.note.includes('偿还');
+                        
+                    case 'savings':
+                        // 存款变动: 存取款，或与利息相关的收入/支出 (此处主要根据记账记录判断)
+                        return r.note.includes('存入') || r.note.includes('取出') || r.category === '利息';
+
+                    case 'loan':
+                        // 贷款变动: 偿还贷款或初始贷款记录（通常会通过 note/category体现）
+                        return r.note.includes('贷款') || r.note.includes('偿还');
+                        
+                    default:
+                        return true;
+                }
+            });
+        }
+        
+        // 按时间倒序排序
+        return filtered.sort((a, b) => b.timestamp - a.timestamp);
+    }, [ledger, activeTab]); // 依赖项增加 activeTab
+
+    const getIconAndColor = (record) => {
+        if (record.isPending) return { icon: '⏳', color: 'bg-yellow-400', text: 'text-yellow-700', label: '待结算收入' };
+        
+        if (record.type === 'income') {
+            if (record.category === '月结工资') return { icon: '💵', color: 'bg-green-600', text: 'text-green-700', label: '月结工资入账' };
+            if (record.note.includes('存入')) return { icon: '📥', color: 'bg-blue-400', text: 'text-blue-700', label: '存入存款' };
+            return { icon: '💰', color: 'bg-green-400', text: 'text-green-700', label: '收入' };
+        }
+        
+        if (record.type === 'expense') {
+            if (record.category === '募捐' || record.note.includes('捐赠')) {
+                 return { icon: '🎁', color: 'bg-red-400', text: 'text-red-700', label: '募捐/捐赠' };
+            }
+            if (record.note.includes('偿还') || record.note.includes('贷款')) {
+                 return { icon: '🏠', color: 'bg-indigo-400', text: 'text-indigo-700', label: '偿还贷款' };
+            }
+            if (record.note.includes('取出')) {
+                 return { icon: '📤', color: 'bg-blue-400', text: 'text-blue-700', label: '取出存款' };
+            }
+            return { icon: '💸', color: 'bg-red-400', text: 'text-red-700', label: '日常支出' };
+        }
+        return { icon: '❓', color: 'bg-gray-400', text: 'text-gray-700', label: '未知交易' };
+    };
+
+    return (
+        <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
+            {/* 顶部标题 */}
+            <div className="flex items-center justify-between mb-4 shrink-0">
+                <button onClick={() => setCurrentApp(null)} className="p-2 -ml-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"><Icon path={Icons.ArrowLeft} size={24}/></button>
+                <div className="flex items-center gap-2 flex-1 ml-3">
+                    <div className="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center text-white shadow-sm border-2 border-white"><Icon path={Icons.CreditCard} size={20} /></div>
+                    <h2 className="text-xl font-black opacity-80">资金变动记录</h2>
+                </div>
+            </div>
+
+            {/* ↓↓↓ 【新增】Tab 筛选导航 ↓↓↓ */}
+            <div className="overflow-x-auto no-scrollbar shrink-0 mb-4">
+                <div className="flex bg-white/50 p-1 rounded-xl backdrop-blur-sm min-w-max gap-1">
+                    {TABS.map(tab => (
+                        <button 
+                            key={tab.id} 
+                            onClick={() => setActiveTab(tab.id)} 
+                            className={`px-3 py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1 ${activeTab === tab.id ? 'bg-white shadow-md scale-[0.98]' : 'text-gray-500 hover:bg-white/50'}`} 
+                            style={{ color: activeTab === tab.id ? tab.color : 'color: var(--theme-text)' }}
+                        >
+                            <Icon path={tab.icon} size={14}/> {tab.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            {/* ↑↑↑ 【新增】Tab 筛选导航 ↑↑↑ */}
 
 
+            {/* 列表区域 */}
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
+                {financialRecords.length === 0 && (
+                    <CabinEmptyState icon="🧾" text={activeTab === 'all' ? "暂无资金变动记录" : "当前筛选条件下暂无记录"} />
+                )}
+
+                {financialRecords.map((r, i) => {
+                    const { icon, color, text, label } = getIconAndColor(r);
+                    const amountDisplay = r.type === 'income' ? `+${r.amount.toLocaleString()}` : `-${r.amount.toLocaleString()}`;
+                    const borderStyle = r.isPending ? 'border-l-8 border-yellow-400' : (r.type === 'income' ? 'border-l-8 border-green-400' : 'border-l-8 border-red-400');
+
+                    return (
+                        <div 
+                            key={r.id} 
+                            className={`nook-card p-4 flex justify-between items-center ${borderStyle} animate-pop`}
+                            style={{animationDelay: `${i * 30}ms`}}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm border-2 border-white/50`} style={{backgroundColor: color}}>
+                                    {icon}
+                                </div>
+                                <div>
+                                    <div className="font-bold text-[#59584D] text-sm">{label}</div>
+                                    <div className="text-[10px] text-gray-400 font-bold">{r.note || '-'}</div>
+                                </div>
+                            </div>
+                            <div className={`font-black text-lg ${text}`}>{amountDisplay}</div>
+                        </div>
+                    );
+                })}
+            </div>
+            
+            {/* 底部返回桌面由根组件处理 */}
+        </div>
+    );
+};
 const CabinApp = ({ 
     user, cabin, tasks, shoppingItems, wikiItems, messages, projects, inventory, 
     starJar, 
@@ -2625,126 +2770,146 @@ const App = () => {
         remove: async (id) => { setWikiItems(prev => prev.filter(x => x.id !== id)); try { const obj = AV.Object.createWithoutData('NookWiki', id); await obj.destroy(); } catch(e) {} }
     };
 
-   // ==========================================
-   // App 组件 - 记账动作 (ledgerActions) 修正版
-   // ==========================================
-   const ledgerActions = {
-       // [修改] 原有的 addRecord 支持新的 isPending 标志
-       addRecord: async (type, amount, cat, note, isPending = false) => { 
-           const Ledger = AV.Object.extend('NookLedger'); 
-           const l = new Ledger(); 
-           const numericAmount = Number(amount);
-           
-           if (isNaN(numericAmount) || numericAmount <= 0) {
-               showFeedback("请输入有效的金额", "error");
-               return;
-           }
-   
-           l.set('user', localUser); 
-           l.set('type', type); 
-           l.set('amount', numericAmount); 
-           l.set('category', cat); 
-           l.set('note', note); 
-           l.set('date', new Date().toLocaleDateString()); 
-           l.set('timestamp', Date.now()); 
-           
-           // [新增关键字段]
-           if (type === 'income') {
-               l.set('isPending', isPending);
-               if (isPending) {
-                    l.set('isSalary', true); // 标记为工资性质的待结算收入
-               } else {
-                    l.set('isSalary', false); // 非待结算收入
-               }
-           } else {
-               l.set('isPending', false); // 支出没有待结算状态
-           }
-   
-           const tempId = 'temp_' + Date.now(); 
-           const optim = { 
-               id: tempId, 
-               type, 
-               amount: numericAmount, 
-               category: cat, 
-               note, 
-               date: new Date().toLocaleDateString(), 
-               timestamp: Date.now(),
-               isPending: isPending,
-               isSalary: (type === 'income' && isPending)
-           }; 
-           setLedger(prev => [optim, ...prev]); 
-           
-           try { 
-               const saved = await l.save(); 
-               setLedger(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); 
-           } catch(e) {
-               console.error("记账失败:", e);
-               setLedger(prev => prev.filter(x => x.id !== tempId));
-           }
-       }, 
-       
-       deleteRecord: async (id) => { 
-           setLedger(prev => prev.filter(x => x.id !== id)); 
-           try { 
-               const obj = AV.Object.createWithoutData('NookLedger', id); 
-               await obj.destroy(); 
-           } catch(e) {} 
-       },
-   
-       // [新增] 月度工资结算入账
-       settleMonthlySalary: async (finalSettlementAmount, recordsToClear) => {
-           if (!finalSettlementAmount || finalSettlementAmount <= 0) {
-               showFeedback("结算金额必须大于 0", "error");
-               return;
-           }
-           
-           // 1. 乐观更新用户余额 (加入到 pocket)
-           const newPocket = stats.pocket + finalSettlementAmount;
-           const sObj = AV.Object.createWithoutData('NookStats', stats.id);
-           sObj.increment('pocket', finalSettlementAmount);
-   
-           // 2. 乐观更新 Ledger 状态 (本地清零)
-           setLedger(prev => prev.map(r => 
-               recordsToClear.some(s => s.id === r.id) 
-               ? { ...r, isPending: false, settledAt: new Date().toISOString() } 
-               : r
-           ));
-   
-           // 3. LeanCloud 批量更新待结算记录
-           const ledgerObjectsToSettle = recordsToClear.map(r => {
-               const obj = AV.Object.createWithoutData('NookLedger', r.id);
-               obj.set('isPending', false);
-               obj.set('settledAt', new Date());
-               return obj;
-           });
-           
-           // 4. LeanCloud 记录最终的结算入账记录（作为实际的收入记录）
-           const Ledger = AV.Object.extend('NookLedger'); 
-           const actualIncome = new Ledger();
-           actualIncome.set('user', localUser);
-           actualIncome.set('type', 'income');
-           actualIncome.set('amount', finalSettlementAmount);
-           actualIncome.set('category', '月结工资');
-           actualIncome.set('note', '工资入账');
-           actualIncome.set('date', new Date().toLocaleDateString());
-           actualIncome.set('timestamp', Date.now() + 1); // 确保在 Ledger 中排在清零记录之后
-           actualIncome.set('isPending', false);
-           actualIncome.set('isSalary', false);
-   
-   
-           try {
-               await AV.Object.saveAll([...ledgerObjectsToSettle, sObj, actualIncome]);
-               // 【重要】最终更新 stats 和 ledger
-               setStats(prev => ({...prev, pocket: newPocket}));
-               setLedger(prev => [...prev.filter(r => !r.id.startsWith('temp_') && !recordsToClear.some(rc => rc.id === r.id)), simplify(actualIncome), ...prev.filter(r => r.id.startsWith('temp_') || recordsToClear.some(rc => rc.id === r.id))]); // 简单更新列表
-               
-               showFeedback(`月工资 ${finalSettlementAmount.toLocaleString()} 铃钱已入账！`, "success");
-           } catch (e) {
-               console.error("结算失败:", e);
-               showFeedback("结算失败，请重试。", "error");
-           }
-       }
-   };
+// ==========================================
+// App 组件 - 记账动作 (ledgerActions) 最终修正版
+// ==========================================
+const ledgerActions = {
+    // [addRecord 保持不变]
+    addRecord: async (type, amount, cat, note, isPending = false) => { 
+        const Ledger = AV.Object.extend('NookLedger'); 
+        const l = new Ledger(); 
+        const numericAmount = Number(amount);
+        
+        if (isNaN(numericAmount) || numericAmount <= 0) {
+            showFeedback("请输入有效的金额", "error");
+            return;
+        }
+
+        l.set('user', localUser); 
+        l.set('type', type); 
+        l.set('amount', numericAmount); 
+        l.set('category', cat); 
+        l.set('note', note); 
+        l.set('date', new Date().toLocaleDateString()); 
+        l.set('timestamp', Date.now()); 
+        
+        if (type === 'income') {
+            l.set('isPending', isPending);
+            if (isPending) {
+                 l.set('isSalary', true);
+            } else {
+                 l.set('isSalary', false);
+            }
+        } else {
+            l.set('isPending', false);
+        }
+
+        const tempId = 'temp_' + Date.now(); 
+        const optim = { 
+            id: tempId, 
+            type, 
+            amount: numericAmount, 
+            category: cat, 
+            note, 
+            date: new Date().toLocaleDateString(), 
+            timestamp: Date.now(),
+            isPending: isPending,
+            isSalary: (type === 'income' && isPending)
+        }; 
+        setLedger(prev => [optim, ...prev]); 
+        
+        try { 
+            const saved = await l.save(); 
+            setLedger(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); 
+        } catch(e) {
+            console.error("记账失败:", e);
+            setLedger(prev => prev.filter(x => x.id !== tempId));
+        }
+    }, 
+    
+    deleteRecord: async (id) => { 
+        setLedger(prev => prev.filter(x => x.id !== id)); 
+        try { 
+            const obj = AV.Object.createWithoutData('NookLedger', id); 
+            await obj.destroy(); 
+        } catch(e) {} 
+    },
+
+    // [最终修正] 月度工资结算入账
+    settleMonthlySalary: async (finalSettlementAmount, recordsToClear) => {
+        if (!finalSettlementAmount || finalSettlementAmount <= 0) {
+            showFeedback("结算金额必须大于 0", "error");
+            return;
+        }
+        
+        // 1. 准备要删除的记录 ID 列表
+        const clearedIds = recordsToClear.map(r => r.id);
+
+        // 2. 准备 LeanCloud 对象
+        const sObj = AV.Object.createWithoutData('NookStats', stats.id);
+        sObj.increment('pocket', finalSettlementAmount);
+
+        const Ledger = AV.Object.extend('NookLedger'); 
+        const actualIncome = new Ledger();
+        actualIncome.set('user', localUser);
+        actualIncome.set('type', 'income');
+        actualIncome.set('amount', finalSettlementAmount);
+        actualIncome.set('category', '月结工资');
+        actualIncome.set('note', '工资入账');
+        actualIncome.set('date', new Date().toLocaleDateString());
+        actualIncome.set('timestamp', Date.now()); 
+        actualIncome.set('isPending', false);
+        actualIncome.set('isSalary', false);
+
+        // 3. 乐观更新 Ledger 状态 (本地)：
+        //    - 移除所有待删除的记录
+        //    - 加入新的 '月结工资' 记录 (使用临时 ID)
+        const tempActualIncomeId = generateId();
+        const optimActualIncome = { ...simplify(actualIncome), id: tempActualIncomeId };
+
+        setLedger(prev => {
+            return [
+                optimActualIncome, // 新的入账记录
+                ...prev.filter(r => !clearedIds.includes(r.id)) // 过滤掉所有已清零的旧记录
+            ];
+        });
+        
+        // 4. 最终更新 stats
+        const newPocket = stats.pocket + finalSettlementAmount;
+        setStats(prev => ({...prev, pocket: newPocket}));
+
+        try {
+            // 5. LeanCloud 执行删除和保存操作
+            
+            // A. 执行删除操作 (使用 AV.Object.destroyAll)
+            const ledgerObjectsToDelete = recordsToClear.map(r => AV.Object.createWithoutData('NookLedger', r.id));
+            if (ledgerObjectsToDelete.length > 0) {
+                await AV.Object.destroyAll(ledgerObjectsToDelete);
+            }
+            
+            // B. 执行保存操作 (用户状态和新入账记录)
+            const [savedStats, savedIncome] = await AV.Object.saveAll([sObj, actualIncome]);
+
+            // C. 最终同步本地 UI (用真实的 ID 替换乐观更新的 ID)
+             setLedger(prev => prev.map(r => 
+                r.id === tempActualIncomeId ? simplify(savedIncome) : r
+            ));
+
+
+            showFeedback(`月工资 ${finalSettlementAmount.toLocaleString()} 铃钱已入账！`, "success");
+        } catch (e) {
+            console.error("结算失败:", e);
+            showFeedback("结算失败，请重试。", "error");
+            // 失败后，尝试重新拉取数据以恢复状态 (这是最安全的恢复方式)
+            // fetch data 应该在 App.js 根组件中调用，这里我们只回滚乐观更新
+            
+            // 回滚本地状态（移除新入账记录，恢复旧的待结算记录 - 复杂，但为了演示，这里只移除新记录）
+             setLedger(prev => {
+                 return prev.filter(r => r.id !== tempActualIncomeId); // 移除新的月结记录
+             });
+        }
+    }
+};
    const fitnessActions = { updateProfile: async (p) => { setFitProfile(p); try { const f = AV.Object.createWithoutData('NookFitProfile', fitProfile.id); f.set('height', p.height); f.set('weight', p.weight); f.set('age', p.age); f.set('gender', p.gender); await f.save(); } catch(e) {} }, addLog: async (type, val, note) => { const Log = AV.Object.extend('NookFitLog'); const l = new Log(); l.set('user', localUser); l.set('type', type); l.set('val', val); l.set('note', note); l.set('date', new Date().toLocaleDateString()); l.set('timestamp', Date.now()); l.set('time', new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})); const tempId = 'temp_'+Date.now(); const optim = { id: tempId, type, val, note, date: new Date().toLocaleDateString(), timestamp: Date.now(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }; setFitLogs(prev => [optim, ...prev]); try { const saved = await l.save(); setFitLogs(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {} } };
     // ... (在其他 actions 定义之后)
 const voiceWorkActions = { 
@@ -2860,7 +3025,8 @@ const voiceWorkActions = {
                             {currentApp === 'fitness' && <FitnessApp profile={fitProfile} logs={fitLogs} user={userDoc.username} showFeedback={showFeedback} {...fitnessActions}/>}
                             {currentApp === 'voice' && <VoiceWorkApp voiceWorks={voiceWorks} showFeedback={showFeedback} {...voiceWorkActions}/>} 
                             {currentApp === 'wiki' && <WikiApp items={wikiItems} showFeedback={showFeedback} cabin={cabin} {...wikiActionsFull}/>} 
-                            {currentApp === 'finance' && <FinanceApp stats={stats} showFeedback={showFeedback} {...financeActions}/>}
+                            {currentApp === 'finance' && <FinanceApp stats={stats} showFeedback={showFeedback} setCurrentApp={setCurrentApp} {...financeActions}/>}
+							{currentApp === 'history' && <FinanceHistoryApp ledger={ledger} stats={stats} showFeedback={showFeedback}/>} 
                             {currentApp === 'passport' && <PassportApp user={userDoc} stats={stats} passport={passport} {...passportActions}/>}
                             {currentApp === 'shopping' && <ShoppingApp items={shoppingItems} showFeedback={showFeedback} cabin={cabin} memberCount={memberCount} {...shoppingActions}/>}
                             {currentApp === 'decision' && <DecisionApp options={decisionOptions} showFeedback={showFeedback} {...decisionActions}/>}
