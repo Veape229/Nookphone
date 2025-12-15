@@ -1029,10 +1029,42 @@
 		        </div>
 		    );
 		};
-        const LedgerApp = ({ ledger, addRecord, deleteRecord, showFeedback }) => {
-            const [view, setView] = useState('list'); const [timeView, setTimeView] = useState('month'); 
-            const [type, setType] = useState('expense'); const [amount, setAmount] = useState(''); const [category, setCategory] = useState('其他'); const [note, setNote] = useState('');
+        // ==========================================
+        // LedgerApp 组件 (新增工资结算功能)
+        // ==========================================
+        
+        const LedgerApp = ({ ledger, addRecord, deleteRecord, showFeedback, settleMonthlySalary, stats }) => {
+            const [view, setView] = useState('list'); 
+            const [timeView, setTimeView] = useState('month'); 
+            const [type, setType] = useState('expense'); 
+            const [amount, setAmount] = useState(''); 
+            const [category, setCategory] = useState('其他'); 
+            const [note, setNote] = useState('');
+            const [isPending, setIsPending] = useState(false); // 新增状态：是否为预计收入
+        
             const categories = type === 'expense' ? ['吃饭', '零食', '娱乐', '生活', '交通', '服饰', '日用品'] : ['工作', '利息', '其他'];
+            
+            // 筛选待结算记录的逻辑 (用于结算视图)
+            const pendingSalaryRecords = useMemo(() => {
+                const now = new Date();
+                const lastMonth = new Date(now);
+                lastMonth.setMonth(now.getMonth() - 1);
+                lastMonth.setDate(15);
+                
+                const thisMonthSettleDate = new Date(now);
+                thisMonthSettleDate.setDate(15);
+        
+                return ledger.filter(r => {
+                    const recordDate = new Date(r.timestamp);
+                    const isPendingSalary = r.type === 'income' && r.isPending && r.isSalary;
+                    
+                    // 筛选结算周期内（上月15日至本月15日）的待结算工资记录
+                    return isPendingSalary && recordDate >= lastMonth && recordDate <= thisMonthSettleDate;
+                });
+            }, [ledger]);
+        
+            const expectedSalaryTotal = pendingSalaryRecords.reduce((sum, r) => sum + r.amount, 0);
+        
             const filteredLedger = useMemo(() => {
                 const now = new Date();
                 return ledger.filter(r => {
@@ -1042,16 +1074,207 @@
                     else return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
                 });
             }, [ledger, timeView]);
+        
             const summary = useMemo(() => {
                 let inc = 0, exp = 0;
                 filteredLedger.forEach(r => r.type === 'income' ? inc += Number(r.amount) : exp += Number(r.amount));
                 return { income: inc, expense: exp, balance: inc - exp };
             }, [filteredLedger]);
-            const handleAdd = () => { if(!amount) return alert("请输入金额"); addRecord(type, Number(amount), category, note); setAmount(''); setNote(''); setView('list'); showFeedback("记账成功！"); };
+        
+            const handleAdd = () => { 
+                if(!amount) return alert("请输入金额"); 
+                // 【修正】调用 addRecord 时传递 isPending 状态
+                addRecord(type, Number(amount), category, note, isPending); 
+                setAmount(''); 
+                setNote(''); 
+                setIsPending(false); // 重置状态
+                setView('list'); 
+                showFeedback(isPending ? "预计收入已记录" : "记账成功！"); 
+            };
+        
             const handleDelete = (id) => { if (confirm("删除此账单？")) { deleteRecord(id); showFeedback("账单已删除", "error"); } };
             const getSummaryTitle = () => { if (timeView === 'day') return '今日结余'; if (timeView === 'week') return '近7天结余'; return '本月结余'; };
-            if (view === 'add') return (<div className="flex flex-col flex-1 min-h-0 screen-enter h-full"><div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button><h2 className="text-xl font-black opacity-80">记一笔</h2></div><div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4"><div className="flex bg-gray-200 p-1 rounded-xl"><button onClick={()=>setType('expense')} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='expense'?'bg-white text-red-500 shadow-sm scale-95':'text-gray-500'}`}>支出</button><button onClick={()=>setType('income')} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='income'?'bg-white text-green-500 shadow-sm scale-95':'text-gray-500'}`}>收入</button></div><div className="nook-card"><label className="text-xs font-bold text-gray-400 mb-1 block">金额</label><input type="number" value={amount} onChange={e=>setAmount(e.target.value)} className="w-full text-3xl font-black bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="0"/></div><div><label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择分类</label><div className="grid grid-cols-4 gap-2">{categories.map(c => (<button key={c} onClick={()=>setCategory(c)} className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${category===c?'border-[#3DAA86] bg-white text-[#3DAA86] scale-95':'border-transparent bg-white/50 text-gray-500'}`}>{c}</button>))}</div></div><div className="nook-card p-3"><input value={note} onChange={e=>setNote(e.target.value)} className="w-full bg-transparent outline-none text-sm font-bold placeholder-gray-300" placeholder="添加备注 (选填)"/></div><button onClick={handleAdd} className="nook-btn w-full flex justify-center mt-4">完成</button></div></div>);
-            return (<div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full"><div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-2"><div className="w-10 h-10 bg-[#FFD166] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Book} /></div><h2 className="text-xl font-black opacity-80">记账本</h2></div></div><div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm shrink-0">{['day', 'week', 'month'].map(t => (<button key={t} onClick={()=>setTimeView(t)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView===t?'bg-white text-[#3DAA86] shadow-sm scale-95':'text-gray-500'}`}>{t==='day' ? '今日' : (t==='week' ? '近7天' : '本月')}</button>))}</div><div className="bg-[#3D405B] rounded-[24px] p-5 text-[#F4F1DE] shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0 transition-transform hover:scale-[1.02]"><div className="absolute right-0 bottom-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mb-6"></div><div><div className="text-[10px] opacity-60 font-bold mb-1">{getSummaryTitle()}</div><div className="text-2xl font-black tracking-wide">{summary.balance.toLocaleString()}</div></div><div className="text-right space-y-1"><div><span className="text-[10px] bg-green-500/20 text-green-300 px-1.5 rounded mr-1">收</span><span className="text-sm font-bold">{summary.income.toLocaleString()}</span></div><div><span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 rounded mr-1">支</span><span className="text-sm font-bold">{summary.expense.toLocaleString()}</span></div></div></div><button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一笔</button><div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">{filteredLedger.length === 0 && (<div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center"><div className="text-2xl mb-2">📒</div>{timeView === 'day' ? '今天暂无账单' : '暂无记录'}</div>)}{filteredLedger.map((item, i) => (<div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group animate-pop" style={{animationDelay: `${i*50}ms`}}><div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm ${item.type==='expense'?'bg-red-400':'bg-green-400'}`}>{item.category.substring(0,2)}</div><div><div className="font-bold text-[#59584D] text-sm">{item.category} <span className="text-xs font-normal text-gray-400 ml-1">{item.note}</span></div><div className="text-[10px] text-gray-400 font-bold">{item.date}</div></div></div><div className="flex items-center gap-3"><span className={`font-black ${item.type==='expense'?'text-red-500':'text-green-500'}`}>{item.type==='expense'?'-':'+'}{item.amount.toLocaleString()}</span><button onClick={()=>handleDelete(item.id)} className="text-gray-300 hover:text-red-400 transition transform hover:scale-110"><Icon path={Icons.Trash} size={14}/></button></div></div>))}</div></div>);
+        
+            // --- 渲染新增/编辑视图 ---
+            if (view === 'add') return (
+                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
+                    <div className="flex items-center gap-2 mb-4 shrink-0">
+                        <button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button>
+                        <h2 className="text-xl font-black opacity-80">记一笔</h2>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
+                        {/* 收入/支出切换 */}
+                        <div className="flex bg-gray-200 p-1 rounded-xl">
+                            <button onClick={()=>{setType('expense'); setIsPending(false);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='expense'?'bg-white text-red-500 shadow-sm scale-95':'text-gray-500'}`}>支出</button>
+                            <button onClick={()=>{setType('income'); setCategory('工作');}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='income'?'bg-white text-green-500 shadow-sm scale-95':'text-gray-500'}`}>收入</button>
+                        </div>
+                        
+                        {/* [新增] 预计收入开关 */}
+                        {type === 'income' && category === '工作' && (
+                            <div className="nook-card flex items-center justify-between p-4 border-l-8 border-[#3DAA86]">
+                                <div>
+                                    <div className="font-bold text-[#59584D] text-sm">标记为预计收入 (待结算)</div>
+                                    <div className="text-xs text-gray-400">工资收入请先标记为“预计”</div>
+                                </div>
+                                <label className="nook-switch scale-75">
+                                    <input type="checkbox" checked={isPending} onChange={e=>setIsPending(e.target.checked)}/>
+                                    <span className="slider bg-gray-200"></span>
+                                </label>
+                            </div>
+                        )}
+        
+                        <div className="nook-card">
+                            <label className="text-xs font-bold text-gray-400 mb-1 block">金额</label>
+                            <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} className="w-full text-3xl font-black bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="0"/>
+                        </div>
+                        
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择分类</label>
+                            <div className="grid grid-cols-4 gap-2">
+                                {categories.map(c => (
+                                    <button key={c} onClick={()=>setCategory(c)} className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${category===c?'border-[#3DAA86] bg-white text-[#3DAA86] scale-95':'border-transparent bg-white/50 text-gray-500'}`}>
+                                        {c}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        
+                        <div className="nook-card p-3">
+                            <input value={note} onChange={e=>setNote(e.target.value)} className="w-full bg-transparent outline-none text-sm font-bold placeholder-gray-300" placeholder="添加备注 (选填)"/>
+                        </div>
+                        
+                        <button onClick={handleAdd} className="nook-btn w-full flex justify-center mt-4">
+                            {isPending ? '记录预计收入' : '完成记账'}
+                        </button>
+                    </div>
+                </div>
+            );
+            
+            // --- 渲染结算视图 ---
+            if (view === 'settle_view') return (
+                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
+                    <div className="flex items-center gap-2 mb-4 shrink-0">
+                        <button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button>
+                        <h2 className="text-xl font-black opacity-80">月度工资结算</h2>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
+                        <div className="nook-card border-l-8 border-[#3DAA86] p-4">
+                            <div className="text-xs font-bold text-gray-400 mb-1">本次结算周期 ({new Date(pendingSalaryRecords[0]?.timestamp || Date.now()).toLocaleDateString()} - {new Date().toLocaleDateString()})</div>
+                            <div className="text-lg font-black text-[#59584D]">预计收入总额</div>
+                            <div className="text-3xl font-black text-green-500 mt-1">{expectedSalaryTotal.toLocaleString()}</div>
+                        </div>
+        
+                        {/* 实际核对金额输入 */}
+                        <div className="nook-card border-l-8 border-yellow-500 p-4">
+                            <label className="text-sm font-bold text-gray-500 mb-2 block">手动核对：实际结算金额</label>
+                            <input 
+                                type="number" 
+                                value={amount} 
+                                onChange={e => setAmount(e.target.value)} 
+                                onFocus={() => { if (!amount) setAmount(expectedSalaryTotal.toString()); }} // 聚焦时默认填入预计金额
+                                className="nook-input text-2xl font-black text-center" 
+                                placeholder={expectedSalaryTotal.toLocaleString()}
+                            />
+                            <p className="text-[10px] text-gray-400 mt-2">（留空则默认按 **预计总额** 入账）</p>
+                        </div>
+                        
+                        {/* 结算按钮 */}
+                        <button 
+                            onClick={() => settleMonthlySalary(Number(amount) || expectedSalaryTotal, pendingSalaryRecords)} 
+                            disabled={pendingSalaryRecords.length === 0}
+                            className="nook-btn w-full bg-green-500 shadow-[0_5px_0_#2F855A] mt-4"
+                        >
+                            {pendingSalaryRecords.length > 0 
+                                ? `确认结算并入账 ${ (Number(amount) || expectedSalaryTotal).toLocaleString() } 铃钱`
+                                : '暂无待入账收入'}
+                        </button>
+        
+                        {/* 待结算记录清单 (可选) */}
+                        {pendingSalaryRecords.length > 0 && (
+                            <div className="nook-card p-4">
+                                <div className="text-xs font-bold text-gray-500 mb-2">本次将清零的 {pendingSalaryRecords.length} 笔预计工资记录:</div>
+                                {pendingSalaryRecords.map(r => (
+                                    <div key={r.id} className="text-xs bg-gray-50 p-2 rounded flex justify-between border-b border-dashed border-gray-200 last:border-b-0">
+                                        <span className='text-gray-600'>{r.date} - {r.note || '预计工资'}</span>
+                                        <span className="font-bold text-green-500">+{r.amount.toLocaleString()}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        
+            // --- 渲染列表主视图 ---
+            return (
+                <div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full">
+                    {/* 顶部标题 */}
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-[#FFD166] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Book} /></div>
+                            <h2 className="text-xl font-black opacity-80">记账本</h2>
+                        </div>
+                        {/* 【新增】结算入口按钮 */}
+                        {pendingSalaryRecords.length > 0 && (
+                            <button onClick={() => setView('settle_view')} className="bg-red-500 text-white text-xs font-bold px-3 py-2 rounded-full shadow-md animate-pop active:scale-95 transition-all">
+                                🔔 {pendingSalaryRecords.length} 笔待结算
+                            </button>
+                        )}
+                    </div>
+                    
+                    {/* 时间切换 */}
+                    <div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm shrink-0">
+                        {['day', 'week', 'month'].map(t => (<button key={t} onClick={()=>setTimeView(t)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView===t?'bg-white text-[#3DAA86] shadow-sm scale-95':'text-gray-500'}`}>{t==='day' ? '今日' : (t==='week' ? '近7天' : '本月')}</button>))}
+                    </div>
+                    
+                    {/* 统计卡片 */}
+                    <div className="bg-[#3D405B] rounded-[24px] p-5 text-[#F4F1DE] shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0 transition-transform hover:scale-[1.02]">
+                        <div className="absolute right-0 bottom-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mb-6"></div>
+                        <div>
+                            <div className="text-[10px] opacity-60 font-bold mb-1">{getSummaryTitle()}</div>
+                            <div className="text-2xl font-black tracking-wide">{summary.balance.toLocaleString()}</div>
+                        </div>
+                        <div className="text-right space-y-1">
+                            <div><span className="text-[10px] bg-green-500/20 text-green-300 px-1.5 rounded mr-1">收</span><span className="text-sm font-bold">{summary.income.toLocaleString()}</span></div>
+                            <div><span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 rounded mr-1">支</span><span className="text-sm font-bold">{summary.expense.toLocaleString()}</span></div>
+                        </div>
+                    </div>
+                    
+                    {/* 列表和添加按钮 */}
+                    <button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一笔</button>
+                    
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
+                        {filteredLedger.length === 0 && (<div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center"><div className="text-2xl mb-2">📒</div>{timeView === 'day' ? '今天暂无账单' : '暂无记录'}</div>)}
+                        {filteredLedger.map((item, i) => (
+                            <div key={item.id} className={`bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group animate-pop ${item.isPending ? 'border-l-8 border-yellow-400' : (item.type === 'expense' ? 'border-l-8 border-red-400' : 'border-l-8 border-green-400')}`} style={{animationDelay: `${i*50}ms`}}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm ${item.isPending ? 'bg-yellow-400' : (item.type==='expense'?'bg-red-400':'bg-green-400')}`}>
+                                        {item.isPending ? '待' : item.category.substring(0,2)}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-[#59584D] text-sm">
+                                            {item.category} <span className="text-xs font-normal text-gray-400 ml-1">{item.note}</span>
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 font-bold">
+                                            {item.date} {item.isPending && '(预计收入)'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className={`font-black ${item.isPending ? 'text-yellow-500' : (item.type==='expense'?'text-red-500':'text-green-500')}`}>
+                                        {item.isPending ? '+' : (item.type==='expense'?'-':'+')}{item.amount.toLocaleString()}
+                                    </span>
+                                    {!item.isPending && ( // 只有非待结算记录才能删除，避免误删工资
+                                        <button onClick={()=>handleDelete(item.id)} className="text-gray-300 hover:text-red-400 transition transform hover:scale-110"><Icon path={Icons.Trash} size={14}/></button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
         };
 
         // ==========================================
@@ -2402,8 +2625,127 @@ const App = () => {
         remove: async (id) => { setWikiItems(prev => prev.filter(x => x.id !== id)); try { const obj = AV.Object.createWithoutData('NookWiki', id); await obj.destroy(); } catch(e) {} }
     };
 
-    const ledgerActions = { addRecord: async (type, amount, cat, note) => { const Ledger = AV.Object.extend('NookLedger'); const l = new Ledger(); l.set('user', localUser); l.set('type', type); l.set('amount', amount); l.set('category', cat); l.set('note', note); l.set('date', new Date().toLocaleDateString()); l.set('timestamp', Date.now()); const tempId = 'temp_' + Date.now(); const optim = { id: tempId, type, amount, category: cat, note, date: new Date().toLocaleDateString(), timestamp: Date.now() }; setLedger(prev => [optim, ...prev]); try { const saved = await l.save(); setLedger(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {} }, deleteRecord: async (id) => { setLedger(prev => prev.filter(x => x.id !== id)); try { const obj = AV.Object.createWithoutData('NookLedger', id); await obj.destroy(); } catch(e) {} } };
-    const fitnessActions = { updateProfile: async (p) => { setFitProfile(p); try { const f = AV.Object.createWithoutData('NookFitProfile', fitProfile.id); f.set('height', p.height); f.set('weight', p.weight); f.set('age', p.age); f.set('gender', p.gender); await f.save(); } catch(e) {} }, addLog: async (type, val, note) => { const Log = AV.Object.extend('NookFitLog'); const l = new Log(); l.set('user', localUser); l.set('type', type); l.set('val', val); l.set('note', note); l.set('date', new Date().toLocaleDateString()); l.set('timestamp', Date.now()); l.set('time', new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})); const tempId = 'temp_'+Date.now(); const optim = { id: tempId, type, val, note, date: new Date().toLocaleDateString(), timestamp: Date.now(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }; setFitLogs(prev => [optim, ...prev]); try { const saved = await l.save(); setFitLogs(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {} } };
+   // ==========================================
+   // App 组件 - 记账动作 (ledgerActions) 修正版
+   // ==========================================
+   const ledgerActions = {
+       // [修改] 原有的 addRecord 支持新的 isPending 标志
+       addRecord: async (type, amount, cat, note, isPending = false) => { 
+           const Ledger = AV.Object.extend('NookLedger'); 
+           const l = new Ledger(); 
+           const numericAmount = Number(amount);
+           
+           if (isNaN(numericAmount) || numericAmount <= 0) {
+               showFeedback("请输入有效的金额", "error");
+               return;
+           }
+   
+           l.set('user', localUser); 
+           l.set('type', type); 
+           l.set('amount', numericAmount); 
+           l.set('category', cat); 
+           l.set('note', note); 
+           l.set('date', new Date().toLocaleDateString()); 
+           l.set('timestamp', Date.now()); 
+           
+           // [新增关键字段]
+           if (type === 'income') {
+               l.set('isPending', isPending);
+               if (isPending) {
+                    l.set('isSalary', true); // 标记为工资性质的待结算收入
+               } else {
+                    l.set('isSalary', false); // 非待结算收入
+               }
+           } else {
+               l.set('isPending', false); // 支出没有待结算状态
+           }
+   
+           const tempId = 'temp_' + Date.now(); 
+           const optim = { 
+               id: tempId, 
+               type, 
+               amount: numericAmount, 
+               category: cat, 
+               note, 
+               date: new Date().toLocaleDateString(), 
+               timestamp: Date.now(),
+               isPending: isPending,
+               isSalary: (type === 'income' && isPending)
+           }; 
+           setLedger(prev => [optim, ...prev]); 
+           
+           try { 
+               const saved = await l.save(); 
+               setLedger(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); 
+           } catch(e) {
+               console.error("记账失败:", e);
+               setLedger(prev => prev.filter(x => x.id !== tempId));
+           }
+       }, 
+       
+       deleteRecord: async (id) => { 
+           setLedger(prev => prev.filter(x => x.id !== id)); 
+           try { 
+               const obj = AV.Object.createWithoutData('NookLedger', id); 
+               await obj.destroy(); 
+           } catch(e) {} 
+       },
+   
+       // [新增] 月度工资结算入账
+       settleMonthlySalary: async (finalSettlementAmount, recordsToClear) => {
+           if (!finalSettlementAmount || finalSettlementAmount <= 0) {
+               showFeedback("结算金额必须大于 0", "error");
+               return;
+           }
+           
+           // 1. 乐观更新用户余额 (加入到 pocket)
+           const newPocket = stats.pocket + finalSettlementAmount;
+           const sObj = AV.Object.createWithoutData('NookStats', stats.id);
+           sObj.increment('pocket', finalSettlementAmount);
+   
+           // 2. 乐观更新 Ledger 状态 (本地清零)
+           setLedger(prev => prev.map(r => 
+               recordsToClear.some(s => s.id === r.id) 
+               ? { ...r, isPending: false, settledAt: new Date().toISOString() } 
+               : r
+           ));
+   
+           // 3. LeanCloud 批量更新待结算记录
+           const ledgerObjectsToSettle = recordsToClear.map(r => {
+               const obj = AV.Object.createWithoutData('NookLedger', r.id);
+               obj.set('isPending', false);
+               obj.set('settledAt', new Date());
+               return obj;
+           });
+           
+           // 4. LeanCloud 记录最终的结算入账记录（作为实际的收入记录）
+           const Ledger = AV.Object.extend('NookLedger'); 
+           const actualIncome = new Ledger();
+           actualIncome.set('user', localUser);
+           actualIncome.set('type', 'income');
+           actualIncome.set('amount', finalSettlementAmount);
+           actualIncome.set('category', '月结工资');
+           actualIncome.set('note', '工资入账');
+           actualIncome.set('date', new Date().toLocaleDateString());
+           actualIncome.set('timestamp', Date.now() + 1); // 确保在 Ledger 中排在清零记录之后
+           actualIncome.set('isPending', false);
+           actualIncome.set('isSalary', false);
+   
+   
+           try {
+               await AV.Object.saveAll([...ledgerObjectsToSettle, sObj, actualIncome]);
+               // 【重要】最终更新 stats 和 ledger
+               setStats(prev => ({...prev, pocket: newPocket}));
+               setLedger(prev => [...prev.filter(r => !r.id.startsWith('temp_') && !recordsToClear.some(rc => rc.id === r.id)), simplify(actualIncome), ...prev.filter(r => r.id.startsWith('temp_') || recordsToClear.some(rc => rc.id === r.id))]); // 简单更新列表
+               
+               showFeedback(`月工资 ${finalSettlementAmount.toLocaleString()} 铃钱已入账！`, "success");
+           } catch (e) {
+               console.error("结算失败:", e);
+               showFeedback("结算失败，请重试。", "error");
+           }
+       }
+   };
+   const fitnessActions = { updateProfile: async (p) => { setFitProfile(p); try { const f = AV.Object.createWithoutData('NookFitProfile', fitProfile.id); f.set('height', p.height); f.set('weight', p.weight); f.set('age', p.age); f.set('gender', p.gender); await f.save(); } catch(e) {} }, addLog: async (type, val, note) => { const Log = AV.Object.extend('NookFitLog'); const l = new Log(); l.set('user', localUser); l.set('type', type); l.set('val', val); l.set('note', note); l.set('date', new Date().toLocaleDateString()); l.set('timestamp', Date.now()); l.set('time', new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})); const tempId = 'temp_'+Date.now(); const optim = { id: tempId, type, val, note, date: new Date().toLocaleDateString(), timestamp: Date.now(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }; setFitLogs(prev => [optim, ...prev]); try { const saved = await l.save(); setFitLogs(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {} } };
     // ... (在其他 actions 定义之后)
 const voiceWorkActions = { 
     addWork: async (title, price) => { 
