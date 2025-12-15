@@ -791,32 +791,13 @@
         // ==========================================
         
         // 豆狸 (Timmy) 组件
-        const TimmyIcon = () => (
-            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md" style={{overflow:'visible'}}>
-                <circle cx="50" cy="50" r="45" fill="#B87C4C"/>
-                <path d="M15 45 Q30 65 50 55 Q70 65 85 45 Q95 35 85 25 Q70 30 50 25 Q30 30 15 25 Q5 35 15 45" fill="#5D4037"/>
-                <circle cx="35" cy="42" r="8" fill="white"/><circle cx="35" cy="42" r="4" fill="black"/><circle cx="65" cy="42" r="8" fill="white"/><circle cx="65" cy="42" r="4" fill="black"/><circle cx="50" cy="60" r="5" fill="#3E2723"/>
-                <path d="M10 20 L30 15 L25 35 Z" fill="#5D4037"/><path d="M90 20 L70 15 L75 35 Z" fill="#5D4037"/><path d="M15 20 L25 18 L22 30 Z" fill="#FFAB91"/><path d="M85 20 L75 18 L78 30 Z" fill="#FFAB91"/>
-                <path d="M20 70 Q50 90 80 70" stroke="#4CAF50" strokeWidth="10" fill="none" strokeLinecap="round"/>
-                <g transform="translate(-15, -20) rotate(-15)">
-                    <line x1="5" y1="60" x2="5" y2="5" stroke="#8B4513" strokeWidth="3" strokeLinecap="round"/>
-                    <path d="M5 5 L55 25 L5 45 Z" fill="#FF7F50"/>
-                    <path d="M20 25 C25 20 35 30 30 30" stroke="white" strokeWidth="2" fill="none"/>
-                </g>
-            </svg>
-        );
-
-        // 粒狸 (Tommy) 组件
-        const TommyIcon = () => (
-            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
-                <circle cx="50" cy="50" r="45" fill="#B87C4C"/>
-                <path d="M15 45 Q30 65 50 55 Q70 65 85 45 Q95 35 85 25 Q70 30 50 25 Q30 30 15 25 Q5 35 15 45" fill="#5D4037"/>
-                <circle cx="35" cy="42" r="8" fill="white"/><circle cx="35" cy="42" r="4" fill="black"/><circle cx="65" cy="42" r="8" fill="white"/><circle cx="65" cy="42" r="4" fill="black"/><circle cx="50" cy="60" r="5" fill="#3E2723"/>
-                <path d="M10 20 L30 15 L25 35 Z" fill="#5D4037"/><path d="M90 20 L70 15 L75 35 Z" fill="#5D4037"/><path d="M15 20 L25 18 L22 30 Z" fill="#FFAB91"/><path d="M85 20 L75 18 L78 30 Z" fill="#FFAB91"/>
-                <path d="M25 72 Q50 85 75 72" stroke="#2196F3" strokeWidth="10" fill="none" strokeLinecap="round"/>
-            </svg>
-        );
-
+        // 移除原有的 TimmyIcon 和 TommyIcon SVG 定义。
+        // 使用一个占位函数，以防其他地方仍有引用 SVG 的逻辑残留。
+        const TimmyTommyDecoration = () => null; 
+        
+        // Nook Shopping 组件 (输入框置顶版)
+        // ==========================================
+                
         const ShoppingApp = ({ items, addItem, toggleItem, deleteItem, showFeedback, cabin, memberCount }) => {
             const [tab, setTab] = useState('daily'); 
             const [name, setName] = useState('');
@@ -833,7 +814,7 @@
                 setName(''); setPrice(''); setIsShared(false);
                 showFeedback(tab === 'daily' ? "已加入补货清单" : "已加入心愿单");
             };
-
+        
             return (
                 <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
                     {/* 顶部标题 */}
@@ -864,7 +845,7 @@
                         {tab === 'wish' && (<><div className="w-px h-6 bg-gray-300"></div><input type="number" value={price} onChange={e => setPrice(e.target.value)} className="flex-1 bg-transparent outline-none font-bold text-[#59584D] px-2 text-sm text-center w-20 placeholder-gray-400" placeholder="价格"/></>)}
                         <button onClick={handleAdd} className="bg-[#F6E05E] text-[#975A16] rounded-xl w-10 h-10 flex items-center justify-center font-black shadow-sm active:scale-90 transition-transform hover:bg-[#FAF089]"><Icon path={Icons.Plus} size={20}/></button>
                     </div>
-
+        
                     {/* 列表区域 - 移除底部超大 padding */}
                     <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-20 relative z-10">
                         {filtered.length === 0 && (<div className="text-center text-gray-400 py-12 text-xs font-bold opacity-60 flex flex-col items-center gap-2"><div className="text-3xl grayscale opacity-50">{tab === 'daily' ? '🛒' : '✨'}</div>{tab === 'daily' ? '家里物资充足，无需补货' : '暂无心愿，知足常乐'}</div>)}
@@ -873,7 +854,7 @@
                             const amIDone = item.checkedBy && item.checkedBy.includes(myId);
                             const doneCount = item.checkedBy ? item.checkedBy.length : 0;
                             const progressText = item.cabinId ? `(${doneCount}/${memberCount})` : '';
-
+        
                             return (
                                 <div key={item.id} className={`flex items-center justify-between p-3 pl-4 bg-white rounded-2xl shadow-sm border-l-[6px] transition-all animate-pop group ${item.checked ? 'opacity-50 grayscale bg-gray-50 border-gray-200' : (tab==='daily'?'border-[#F6E05E]':'border-purple-300')}`} style={{animationDelay: `${i*30}ms`}}>
                                     <div className="flex items-center gap-3 overflow-hidden flex-1 cursor-pointer" onClick={() => toggleItem(item.id)}>
@@ -881,7 +862,7 @@
                                         <div className="flex flex-col min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <span className={`font-bold text-sm truncate transition-all ${item.checked ? 'line-through text-gray-400' : 'text-[#59584D]'}`}>{item.name}</span>
-                                                {item.cabinId && <span className="text-[9px] font-black text-[#E67E22] bg-[#FF9F43]/10 px-1 rounded">{progressText}</span>}
+                                                {item.cabinId && <span className="text-[9px] bg-[#FF9F43]/20 text-[#E67E22] px-1.5 py-0.5 rounded-md font-black whitespace-nowrap">{progressText}</span>}
                                             </div>
                                         </div>
                                     </div>
@@ -893,15 +874,21 @@
                             );
                         })}
                     </div>
-
-                    {/* 豆狸 & 粒狸 - 放在右下角装饰 */}
-                    <div className="absolute bottom-4 right-4 flex gap-2 z-0 pointer-events-none animate-float-slow opacity-90">
-                        <div className="w-14 h-14 animate-bounce" style={{animationDuration: '2.5s'}}><TimmyIcon /></div>
-                        <div className="w-12 h-12 mt-4"><TommyIcon /></div>
+        
+                    {/* 豆狸 & 粒狸 - 替换为 PNG 图片 */}
+                    <div className="absolute bottom-[-10px] right-[-10px] z-0 pointer-events-none opacity-90">
+                        <img 
+                            src="https://veape229-1308125337.cos.ap-chengdu.myqcloud.com/Nook/pic2/douli.png" 
+                            alt="Timmy and Tommy" 
+                            // 调整尺寸和浮动动画，确保不会遮挡主要内容
+                            className="w-32 h-auto animate-float-slow" 
+                            style={{animationDuration: '4s'}}
+                        />
                     </div>
                 </div>
             );
         };
+
 		// “今天吃什么” 转盘组件
 		// ==========================================
 		const DecisionApp = ({ options, addOption, deleteOption, showFeedback }) => {
