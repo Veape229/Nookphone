@@ -2793,11 +2793,197 @@ const App = () => {
 	};
 	// ...
 
+    // ==========================================
+    // App 组件 - 任务动作 (taskActions) 最终修正版
+    // ==========================================
     const taskActions = {
-        addTask: async (title, diff, type, reward, money, calories, cabinId) => { const Task = AV.Object.extend('NookTask'); const t = new Task(); t.set('user', localUser); t.set('title', title); t.set('difficulty', diff); t.set('type', type); t.set('reward', reward); t.set('completed', false); t.set('completedBy', []); if(money) t.set('money', money); if(calories) t.set('calories', calories); t.set('date', new Date().toLocaleDateString()); if (cabinId) t.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId)); const tempId = 'temp_' + Date.now(); const optimTask = { id: tempId, title, difficulty: diff, type, reward, completed: false, completedBy: [], money, calories, timestamp: Date.now(), createdAt: new Date().toISOString(), cabinId }; setTasks(prev => [optimTask, ...prev]); try { const saved = await t.save(); setTasks(prev => prev.map(x => x.id === tempId ? { ...simplify(saved), cabinId: saved.get('cabin')?.id, completedBy: [] } : x)); } catch(e) { setTasks(prev => prev.filter(x => x.id !== tempId)); } },
+        addTask: async (title, diff, type, reward, money, calories, cabinId) => { 
+            const Task = AV.Object.extend('NookTask'); const t = new Task(); 
+            t.set('user', localUser); t.set('title', title); t.set('difficulty', diff); t.set('type', type); t.set('reward', reward); t.set('completed', false); t.set('completedBy', []); 
+            if(money) t.set('money', money); if(calories) t.set('calories', calories); 
+            t.set('date', new Date().toLocaleDateString()); 
+            if (cabinId) t.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId)); 
+            
+            const tempId = 'temp_' + Date.now(); 
+            const optimTask = { id: tempId, title, difficulty: diff, type, reward, completed: false, completedBy: [], money, calories, timestamp: Date.now(), createdAt: new Date().toISOString(), cabinId }; 
+            setTasks(prev => [optimTask, ...prev]); 
+            
+            try { 
+                const saved = await t.save(); 
+                setTasks(prev => prev.map(x => x.id === tempId ? { ...simplify(saved), cabinId: saved.get('cabin')?.id, completedBy: [] } : x)); 
+            } catch(e) { 
+                setTasks(prev => prev.filter(x => x.id !== tempId)); 
+            } 
+        },
         updateTask: async (id, updates) => { if (id.toString().startsWith('temp_')) return; setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t)); try { const tObj = AV.Object.createWithoutData('NookTask', id); if(updates.title!==undefined) tObj.set('title', updates.title); if(updates.difficulty!==undefined) tObj.set('difficulty', updates.difficulty); if(updates.type!==undefined) tObj.set('type', updates.type); if(updates.reward!==undefined) tObj.set('reward', updates.reward); if(updates.money!==undefined) { if (updates.money===null) tObj.unset('money'); else tObj.set('money', updates.money); } if(updates.calories!==undefined) { if (updates.calories===null) tObj.unset('calories'); else tObj.set('calories', updates.calories); } if(updates.cabinId!==undefined) { if (updates.cabinId) tObj.set('cabin', AV.Object.createWithoutData('NookCabin', updates.cabinId)); else tObj.unset('cabin'); } await tObj.save(); showFeedback("任务已更新"); } catch(e) { showFeedback("更新失败", "error"); } },
         deleteTask: async (id) => { if (id.toString().startsWith('temp_')) return; const task = tasks.find(t => t.id === id); if (!task) return; if(!confirm("确定删除？")) return; setTasks(prev => prev.filter(t => t.id !== id)); try { const tObj = AV.Object.createWithoutData('NookTask', id); await tObj.destroy(); showFeedback("任务已删除"); } catch(e) { showFeedback("删除失败", "error"); } },
-        completeTask: async (taskId) => { if (taskId.toString().startsWith('temp_')) return; const task = tasks.find(t => t.id === taskId); if(!task) return; const myId = localUser.id; const oldCompletedBy = task.completedBy || []; if (oldCompletedBy.includes(myId)) return; const newCompletedBy = [...oldCompletedBy, myId]; const isFullyCompleted = task.cabinId ? (newCompletedBy.length >= memberCount) : true; setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completedBy: newCompletedBy, completed: isFullyCompleted } : t)); setStats(prev => ({ ...prev, miles: (prev.miles || 0) + task.reward, xp: (prev.xp || 0) + task.reward })); try { const tObj = AV.Object.createWithoutData('NookTask', taskId); tObj.addUnique('completedBy', myId); if (isFullyCompleted) tObj.set('completed', true); await tObj.save(); const sObj = AV.Object.createWithoutData('NookStats', stats.id); sObj.increment('miles', task.reward); sObj.increment('xp', task.reward); await sObj.save(); } catch(e) { setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completedBy: oldCompletedBy, completed: task.completed } : t)); } }
+        
+        // ↓↓↓ 【核心修正】完成任务时，同步更新 Ledger, Stats, FitLog ↓↓↓
+        completeTask: async (taskId) => { 
+            if (taskId.toString().startsWith('temp_')) return; 
+            const task = tasks.find(t => t.id === taskId); 
+            if(!task) return; 
+            const myId = localUser.id; 
+            const oldCompletedBy = task.completedBy || []; 
+            if (oldCompletedBy.includes(myId)) return; 
+            
+            const newCompletedBy = [...oldCompletedBy, myId]; 
+            const isFullyCompleted = task.cabinId ? (newCompletedBy.length >= memberCount) : true; 
+    
+            // ----------------------------------------------------------------
+            // A. 乐观更新（UI 立即响应）
+            // ----------------------------------------------------------------
+    
+            // 1. 任务更新
+            setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completedBy: newCompletedBy, completed: isFullyCompleted } : t));
+            
+            // 2. Stats 更新 (XP/Miles)
+            const rewardXP = task.reward || 0;
+            const rewardMiles = task.reward || 0;
+            setStats(prev => ({ 
+                ...prev, 
+                miles: (prev.miles || 0) + rewardMiles, 
+                xp: (prev.xp || 0) + rewardXP 
+            }));
+    
+            // 3. 资金和 Ledger 更新 (如果存在 money 关联)
+            let moneyChangeAmount = 0;
+            let tempLedgerId = null;
+            let optimLedger = null;
+            if (task.money) {
+                const amount = Number(task.money.amount);
+                moneyChangeAmount = (task.money.type === 'income' ? amount : -amount);
+                
+                // 乐观更新 pocket
+                setStats(prev => ({ ...prev, pocket: (prev.pocket || 0) + moneyChangeAmount }));
+                
+                // 乐观更新 Ledger
+                tempLedgerId = 'temp_l_' + Date.now();
+                optimLedger = { 
+                    id: tempLedgerId, 
+                    type: task.money.type, 
+                    amount: amount, 
+                    category: '任务奖励', // 统一使用任务奖励/消耗
+                    note: `[任务] ${task.title}`, 
+                    date: new Date().toLocaleDateString(), 
+                    timestamp: Date.now() 
+                };
+                setLedger(prev => [optimLedger, ...prev]);
+            }
+            
+            // 4. FitLog 更新 (如果存在 calories 关联)
+            let tempFitLogId = null;
+            let optimFitLog = null;
+            if (task.calories) {
+                const val = Number(task.calories);
+                const type = (task.type === '健身' || task.type === '娱乐') ? 'exercise' : 'intake';
+                
+                // 乐观更新 FitLog
+                tempFitLogId = 'temp_f_' + Date.now();
+                optimFitLog = { 
+                    id: tempFitLogId, 
+                    type, 
+                    val, 
+                    note: task.title, 
+                    date: new Date().toLocaleDateString(), 
+                    timestamp: Date.now(), 
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                };
+                setFitLogs(prev => [optimFitLog, ...prev]);
+            }
+    
+    
+            // ----------------------------------------------------------------
+            // B. LeanCloud 持久化
+            // ----------------------------------------------------------------
+            try { 
+                // 1. 任务对象更新
+                const tObj = AV.Object.createWithoutData('NookTask', taskId); 
+                tObj.addUnique('completedBy', myId); 
+                if (isFullyCompleted) tObj.set('completed', true); 
+                
+                // 2. Stats 对象更新 (XP/Miles/Pocket)
+                const sObj = AV.Object.createWithoutData('NookStats', stats.id); 
+                sObj.increment('miles', rewardMiles); 
+                sObj.increment('xp', rewardXP); 
+                if (moneyChangeAmount !== 0) {
+                    sObj.increment('pocket', moneyChangeAmount);
+                }
+                
+                // 3. LeanCloud 批量保存对象列表
+                const objectsToSave = [tObj, sObj];
+                let savedLedger = null;
+                let savedFitLog = null;
+                
+                // 4. Ledger 记录创建
+                if (optimLedger) {
+                    const Ledger = AV.Object.extend('NookLedger'); 
+                    const lObj = new Ledger();
+                    lObj.set('user', localUser); 
+                    lObj.set('type', optimLedger.type); 
+                    lObj.set('amount', optimLedger.amount); 
+                    lObj.set('category', optimLedger.category); 
+                    lObj.set('note', optimLedger.note); 
+                    lObj.set('date', optimLedger.date); 
+                    lObj.set('timestamp', optimLedger.timestamp);
+                    objectsToSave.push(lObj);
+                }
+                
+                // 5. FitLog 记录创建
+                if (optimFitLog) {
+                    const Log = AV.Object.extend('NookFitLog');
+                    const fObj = new Log();
+                    fObj.set('user', localUser);
+                    fObj.set('type', optimFitLog.type);
+                    fObj.set('val', optimFitLog.val);
+                    fObj.set('note', optimFitLog.note);
+                    fObj.set('date', optimFitLog.date);
+                    fObj.set('timestamp', optimFitLog.timestamp);
+                    fObj.set('time', optimFitLog.time);
+                    objectsToSave.push(fObj);
+                }
+    
+                const results = await AV.Object.saveAll(objectsToSave); 
+                
+                // 6. 后续本地状态同步 (替换临时 ID)
+                if (optimLedger) {
+                    savedLedger = results.find(r => r.className === 'NookLedger');
+                    if(savedLedger) setLedger(prev => prev.map(x => x.id === tempLedgerId ? simplify(savedLedger) : x));
+                }
+                if (optimFitLog) {
+                    savedFitLog = results.find(r => r.className === 'NookFitLog');
+                    if(savedFitLog) setFitLogs(prev => prev.map(x => x.id === tempFitLogId ? simplify(savedFitLog) : x));
+                }
+    
+                showFeedback(`打卡成功！+${rewardMiles} Miles`, "success");
+    
+            } catch(e) { 
+                console.error("任务同步失败，正在回滚本地状态...", e);
+                showFeedback("任务同步失败，请检查网络", "error");
+    
+                // 回滚本地任务状态
+                setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completedBy: oldCompletedBy, completed: task.completed } : t)); 
+                
+                // 回滚 Stats (XP/Miles)
+                setStats(prev => ({ 
+                    ...prev, 
+                    miles: (prev.miles || 0) - rewardMiles, 
+                    xp: (prev.xp || 0) - rewardXP 
+                }));
+    
+                // 回滚 Ledger/Pocket
+                if (optimLedger) {
+                    setStats(prev => ({ ...prev, pocket: (prev.pocket || 0) - moneyChangeAmount }));
+                    setLedger(prev => prev.filter(x => x.id !== tempLedgerId));
+                }
+                
+                // 回滚 FitLog
+                if (optimFitLog) {
+                     setFitLogs(prev => prev.filter(x => x.id !== tempFitLogId));
+                }
+            }
+        }
+        // ↑↑↑ 【核心修正】完成任务时，同步更新 Ledger, Stats, FitLog ↑↑↑
     };
 
     const shoppingActions = {
