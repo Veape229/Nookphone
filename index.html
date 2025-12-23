@@ -526,10 +526,8 @@ const IdeaApp = ({ ideas, addIdea, deleteIdea, showFeedback }) => {
         </div>
     );
 };
-
-        // ==========================================
 // ==========================================
-        // Wiki App (带小屋同步功能)
+        // Wiki App (修复版：解决无法查看详情问题)
         // ==========================================
         const WikiApp = ({ items, add, update, remove, showFeedback, cabin }) => {
             const [view, setView] = useState('list');
@@ -539,14 +537,16 @@ const IdeaApp = ({ ideas, addIdea, deleteIdea, showFeedback }) => {
             const [preview, setPreview] = useState(null); 
             const [isUploading, setIsUploading] = useState(false); 
             const fileInputRef = useRef(null);
-            
-            // [新增] 共享状态
             const [isShared, setIsShared] = useState(false);
 
+            // 安全的搜索过滤
             const filteredItems = useMemo(() => {
                 if (!search) return items;
                 const lowerSearch = search.toLowerCase();
-                return items.filter(i => i.title.toLowerCase().includes(lowerSearch) || i.content.toLowerCase().includes(lowerSearch));
+                return items.filter(i => 
+                    (i.title && i.title.toLowerCase().includes(lowerSearch)) || 
+                    (i.content && i.content.toLowerCase().includes(lowerSearch))
+                );
             }, [items, search]);
 
             const handleFileChange = (e) => {
@@ -585,16 +585,158 @@ const IdeaApp = ({ ideas, addIdea, deleteIdea, showFeedback }) => {
             };
 
             const handleDelete = (id) => { if(confirm("删除此记录？")) { remove(id); setView('list'); } };
-            const handleViewDetail = (item) => { setDraft(item); setView('detail'); };
+            
+            // 修复：确保正确设置 draft 并切换视图
+            const handleViewDetail = (item) => { 
+                setDraft(item); 
+                setView('detail'); 
+            };
+            
             const handleCreate = () => { setDraft({ id: null, title: '', content: '', image: null }); setPreview(null); setFile(null); setIsShared(false); setView('edit'); };
             const handleEditFromDetail = () => { setPreview(draft.image || null); setFile(null); setIsShared(!!draft.cabinId); setView('edit'); };
 
             useEffect(() => { return () => { if (file && preview) URL.revokeObjectURL(preview); }; }, [file, preview]);
 
-            if (view === 'detail') return (<div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative"><div className="flex items-center justify-between mb-4 shrink-0"><button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"><Icon path={Icons.ArrowLeft} size={24}/></button><h2 className="text-xl font-black opacity-80">查看详情</h2><button onClick={()=>handleDelete(draft.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><Icon path={Icons.Trash} size={20}/></button></div><div className="flex-1 overflow-y-auto no-scrollbar pb-20 animate-pop">{draft.image && (<div className="w-full rounded-2xl overflow-hidden shadow-sm mb-6 border-4 border-white bg-gray-100 relative group"><img src={draft.image} alt="detail" className="w-full h-auto object-contain max-h-[400px]" onClick={() => window.open(draft.image, '_blank')} /><div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-md pointer-events-none">点击查看原图</div></div>)}<div className="px-2"><h1 className="text-2xl font-black text-[#59584D] mb-2 leading-tight flex items-center gap-2">{draft.title} {draft.cabinId && <Icon path={Icons.Home} size={16} className="text-[#E67E22]"/>}</h1><div className="text-xs font-bold text-gray-300 mb-6 flex items-center gap-2"><Icon path={Icons.Leaf} size={12}/>{new Date(draft.updatedTimestamp || draft.timestamp || Date.now()).toLocaleString()}</div><div className="text-sm font-medium text-[#59584D] leading-7 whitespace-pre-wrap select-text">{draft.content || "（没有填写内容）"}</div></div></div><div className="absolute bottom-6 left-0 right-0 flex justify-center z-30"><button onClick={handleEditFromDetail} className="bg-[#667EEA] text-white px-8 py-3 rounded-full shadow-xl hover:bg-[#5A67D8] transition active:scale-95 flex items-center gap-2 font-bold animate-pop"><Icon path={Icons.Edit} size={18}/> 编辑内容</button></div></div>);
-            if (view === 'edit') return (<div className="flex flex-col flex-1 min-h-0 screen-enter h-full"><div className="flex items-center justify-between mb-4 shrink-0"><button onClick={()=>setView(draft.id ? 'detail' : 'list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"><Icon path={Icons.ArrowLeft} size={24}/></button><h2 className="text-xl font-black opacity-80">{draft.id ? '编辑记录' : '新记录'}</h2><div className="w-10"></div></div><div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4"><div className="nook-card p-4"><label className="text-xs font-bold text-gray-400 mb-1 block">标题</label><input value={draft.title} onChange={e=>setDraft({...draft, title: e.target.value})} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2 placeholder-gray-300" placeholder="输入标题..."/></div><div className="nook-card p-4"><label className="text-xs font-bold text-gray-400 mb-2 block">配图 (可选)</label><input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" hidden />{preview ? (<div className="relative rounded-2xl overflow-hidden border-2 border-gray-100 animate-pop group"><img src={preview} alt="preview" className="w-full max-h-[200px] object-cover bg-gray-50" /><button onClick={handleRemoveImage} className="absolute top-3 right-3 bg-black/40 text-white p-2 rounded-full backdrop-blur-md hover:bg-red-500 transition-all shadow-sm"><Icon path={Icons.Trash} size={18}/></button></div>) : (<button onClick={() => fileInputRef.current.click()} className="w-full h-32 border-3 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-[#667EEA] hover:text-[#667EEA] hover:bg-[#667EEA]/5 transition-all gap-2"><Icon path={Icons.Plus} size={24}/><span className="text-xs font-bold">点击上传图片</span></button>)}</div>{cabin && (<div className="nook-card border-l-8 border-[#FF9F43] flex items-center justify-between p-4"><div><div className="font-bold text-[#59584D] text-sm">同步到小屋</div></div><label className="nook-switch scale-75"><input type="checkbox" checked={isShared} onChange={e=>setIsShared(e.target.checked)}/><span className="slider bg-gray-200"></span></label></div>)}<div className="nook-card p-4 flex-1 flex flex-col min-h-[150px]"><label className="text-xs font-bold text-gray-400 mb-2 block">内容</label><textarea value={draft.content} onChange={e=>setDraft({...draft, content: e.target.value})} className="w-full flex-1 bg-transparent outline-none resize-none text-sm font-medium leading-relaxed text-[#59584D] min-h-[100px] placeholder-gray-300" placeholder="记录一点想法..."/></div><button onClick={handleSave} disabled={isUploading} className={`nook-btn w-full mt-2 bg-[#667EEA] shadow-[0_5px_0_#5A67D8] flex items-center justify-center gap-2 ${isUploading ? 'opacity-70 cursor-wait' : ''}`}>{isUploading ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>保存中...</span></>) : "保存"}</button></div></div>);
+            // 辅助函数：安全格式化日期
+            const getDisplayDate = (item) => {
+                const ts = item.updatedTimestamp || item.timestamp || item.createdAt;
+                if (!ts) return new Date().toLocaleDateString();
+                return new Date(ts).toLocaleDateString();
+            };
 
-            return (<div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full"><div className="flex items-center justify-between mb-4 shrink-0"><div className="flex items-center gap-2"><div className="w-10 h-10 bg-[#667EEA] rounded-full flex items-center justify-center text-white shadow-sm"><Icon path={Icons.Bookmark} /></div><h2 className="text-xl font-black opacity-80">Nook小知识</h2></div></div><div className="bg-white/60 p-2 rounded-2xl mb-4 flex items-center gap-2 backdrop-blur-sm shadow-inner shrink-0"><Icon path={Icons.Search} size={18} className="text-gray-400 ml-2"/><input value={search} onChange={e=>setSearch(e.target.value)} className="bg-transparent w-full outline-none text-sm font-bold text-[#59584D] placeholder-gray-300" placeholder="搜索知识..."/></div><button onClick={handleCreate} className="absolute bottom-6 right-2 bg-[#667EEA] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#5A67D8] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一条</button><div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">{filteredItems.length === 0 && <div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center gap-2"><div className="text-4xl grayscale opacity-50">📖</div>暂无记录</div>}{filteredItems.map((item, i) => (<div key={item.id} onClick={()=>handleViewDetail(item)} className="bg-white rounded-2xl p-4 border-l-8 border-[#667EEA] shadow-sm cursor-pointer hover:bg-indigo-50/50 transition-all animate-pop group flex gap-4 relative overflow-hidden" style={{animationDelay: `${i*50}ms`}}><div className="flex-1 min-w-0 z-10"><div className="flex justify-between items-start mb-2"><h3 className="font-bold text-[#59584D] truncate text-base flex items-center gap-1">{item.title} {item.cabinId && <Icon path={Icons.Home} size={12} className="text-[#E67E22]"/>}</h3></div><p className="text-xs text-gray-500 line-clamp-2 font-medium leading-relaxed">{item.content}</p><div className="text-[10px] text-gray-300 font-bold mt-2">{new Date(item.updatedTimestamp || item.timestamp).toLocaleDateString()}</div></div>{item.image && (<div className="w-20 h-20 rounded-xl bg-gray-200 overflow-hidden shrink-0 border-2 border-white shadow-sm relative z-10 group-hover:scale-105 transition-transform"><img src={item.image} alt="thumb" className="w-full h-full object-cover" loading="lazy" /></div>)}<Icon path={Icons.Bookmark} size={80} className="absolute -right-4 -bottom-6 text-[#667EEA] opacity-5 z-0 pointer-events-none transform -rotate-12 group-hover:rotate-0 transition-all"/></div>))}</div></div>);
+            // --- 详情视图 ---
+            if (view === 'detail') return (
+                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                        <button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+                            <Icon path={Icons.ArrowLeft} size={24}/>
+                        </button>
+                        <h2 className="text-xl font-black opacity-80">查看详情</h2>
+                        <button onClick={()=>handleDelete(draft.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
+                            <Icon path={Icons.Trash} size={20}/>
+                        </button>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto no-scrollbar pb-20 animate-pop">
+                        {draft.image && (
+                            <div className="w-full rounded-2xl overflow-hidden shadow-sm mb-6 border-4 border-white bg-gray-100 relative group">
+                                <img src={draft.image} alt="detail" className="w-full h-auto object-contain max-h-[400px]" onClick={() => window.open(draft.image, '_blank')} />
+                                <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-md pointer-events-none">点击查看原图</div>
+                            </div>
+                        )}
+                        <div className="px-2">
+                            <h1 className="text-2xl font-black text-[#59584D] mb-2 leading-tight flex items-center gap-2">
+                                {draft.title} {draft.cabinId && <Icon path={Icons.Home} size={16} className="text-[#E67E22]"/>}
+                            </h1>
+                            <div className="text-xs font-bold text-gray-300 mb-6 flex items-center gap-2">
+                                <Icon path={Icons.Leaf} size={12}/>
+                                {getDisplayDate(draft)}
+                            </div>
+                            <div className="text-sm font-medium text-[#59584D] leading-7 whitespace-pre-wrap select-text">
+                                {draft.content || "（没有填写内容）"}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="absolute bottom-6 left-0 right-0 flex justify-center z-30">
+                        <button onClick={handleEditFromDetail} className="bg-[#667EEA] text-white px-8 py-3 rounded-full shadow-xl hover:bg-[#5A67D8] transition active:scale-95 flex items-center gap-2 font-bold animate-pop">
+                            <Icon path={Icons.Edit} size={18}/> 编辑内容
+                        </button>
+                    </div>
+                </div>
+            );
+
+            // --- 编辑视图 ---
+            if (view === 'edit') return (
+                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                        <button onClick={()=>setView(draft.id ? 'detail' : 'list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"><Icon path={Icons.ArrowLeft} size={24}/></button>
+                        <h2 className="text-xl font-black opacity-80">{draft.id ? '编辑记录' : '新记录'}</h2>
+                        <div className="w-10"></div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
+                        <div className="nook-card p-4">
+                            <label className="text-xs font-bold text-gray-400 mb-1 block">标题</label>
+                            <input value={draft.title} onChange={e=>setDraft({...draft, title: e.target.value})} className="w-full text-lg font-bold bg-transparent outline-none border-b-2 border-gray-100 py-2 placeholder-gray-300" placeholder="输入标题..."/>
+                        </div>
+                        <div className="nook-card p-4">
+                            <label className="text-xs font-bold text-gray-400 mb-2 block">配图 (可选)</label>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" hidden />
+                            {preview ? (
+                                <div className="relative rounded-2xl overflow-hidden border-2 border-gray-100 animate-pop group">
+                                    <img src={preview} alt="preview" className="w-full max-h-[200px] object-cover bg-gray-50" />
+                                    <button onClick={handleRemoveImage} className="absolute top-3 right-3 bg-black/40 text-white p-2 rounded-full backdrop-blur-md hover:bg-red-500 transition-all shadow-sm"><Icon path={Icons.Trash} size={18}/></button>
+                                </div>
+                            ) : (
+                                <button onClick={() => fileInputRef.current.click()} className="w-full h-32 border-3 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-[#667EEA] hover:text-[#667EEA] hover:bg-[#667EEA]/5 transition-all gap-2"><Icon path={Icons.Plus} size={24}/><span className="text-xs font-bold">点击上传图片</span></button>
+                            )}
+                        </div>
+                        {cabin && (
+                            <div className="nook-card border-l-8 border-[#FF9F43] flex items-center justify-between p-4">
+                                <div><div className="font-bold text-[#59584D] text-sm">同步到小屋</div></div>
+                                <label className="nook-switch scale-75"><input type="checkbox" checked={isShared} onChange={e=>setIsShared(e.target.checked)}/><span className="slider bg-gray-200"></span></label>
+                            </div>
+                        )}
+                        <div className="nook-card p-4 flex-1 flex flex-col min-h-[150px]">
+                            <label className="text-xs font-bold text-gray-400 mb-2 block">内容</label>
+                            <textarea value={draft.content} onChange={e=>setDraft({...draft, content: e.target.value})} className="w-full flex-1 bg-transparent outline-none resize-none text-sm font-medium leading-relaxed text-[#59584D] min-h-[100px] placeholder-gray-300" placeholder="记录一点想法..."/>
+                        </div>
+                        <button onClick={handleSave} disabled={isUploading} className={`nook-btn w-full mt-2 bg-[#667EEA] shadow-[0_5px_0_#5A67D8] flex items-center justify-center gap-2 ${isUploading ? 'opacity-70 cursor-wait' : ''}`}>{isUploading ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>保存中...</span></>) : "保存"}</button>
+                    </div>
+                </div>
+            );
+
+            // --- 列表视图 ---
+            return (
+                <div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full">
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-[#667EEA] rounded-full flex items-center justify-center text-white shadow-sm"><Icon path={Icons.Bookmark} /></div>
+                            <h2 className="text-xl font-black opacity-80">Nook小知识</h2>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white/60 p-2 rounded-2xl mb-4 flex items-center gap-2 backdrop-blur-sm shadow-inner shrink-0">
+                        <Icon path={Icons.Search} size={18} className="text-gray-400 ml-2"/>
+                        <input value={search} onChange={e=>setSearch(e.target.value)} className="bg-transparent w-full outline-none text-sm font-bold text-[#59584D] placeholder-gray-300" placeholder="搜索知识..."/>
+                    </div>
+                    
+                    <button onClick={handleCreate} className="absolute bottom-6 right-2 bg-[#667EEA] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#5A67D8] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop">
+                        <Icon path={Icons.Plus} size={18}/> 记一条
+                    </button>
+                    
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
+                        {filteredItems.length === 0 && <div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center gap-2"><div className="text-4xl grayscale opacity-50">📖</div>暂无记录</div>}
+                        
+                        {filteredItems.map((item, i) => (
+                            <div 
+                                key={item.id} 
+                                onClick={(e) => { e.stopPropagation(); handleViewDetail(item); }} 
+                                className="bg-white rounded-2xl p-4 border-l-8 border-[#667EEA] shadow-sm cursor-pointer hover:bg-indigo-50/50 transition-all animate-pop group flex gap-4 relative overflow-hidden" 
+                                style={{animationDelay: `${i*50}ms`}}
+                            >
+                                <div className="flex-1 min-w-0 z-10">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-bold text-[#59584D] truncate text-base flex items-center gap-1">
+                                            {item.title} {item.cabinId && <Icon path={Icons.Home} size={12} className="text-[#E67E22]"/>}
+                                        </h3>
+                                    </div>
+                                    <p className="text-xs text-gray-500 line-clamp-2 font-medium leading-relaxed">{item.content}</p>
+                                    <div className="text-[10px] text-gray-300 font-bold mt-2">
+                                        {getDisplayDate(item)}
+                                    </div>
+                                </div>
+                                {item.image && (
+                                    <div className="w-20 h-20 rounded-xl bg-gray-200 overflow-hidden shrink-0 border-2 border-white shadow-sm relative z-10 group-hover:scale-105 transition-transform">
+                                        <img src={item.image} alt="thumb" className="w-full h-full object-cover" loading="lazy" />
+                                    </div>
+                                )}
+                                <Icon path={Icons.Bookmark} size={80} className="absolute -right-4 -bottom-6 text-[#667EEA] opacity-5 z-0 pointer-events-none transform -rotate-12 group-hover:rotate-0 transition-all"/>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
         };
 
         const FitnessApp = ({ profile, logs, updateProfile, addLog, user, showFeedback }) => {
@@ -1867,6 +2009,9 @@ const FinanceHistoryApp = ({ ledger, stats, setCurrentApp, showFeedback }) => {
 
 
 
+// ==========================================
+// CabinApp 组件 (修复版：支持查看共享知识详情)
+// ==========================================
 const CabinApp = ({ 
     user, cabin, tasks, shoppingItems, wikiItems, messages, projects, inventory, 
     starJar, 
@@ -1885,6 +2030,9 @@ const CabinApp = ({
     const [members, setMembers] = useState([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
     
+    // [新增] 用于小屋内查看 Wiki 详情的状态
+    const [selectedWiki, setSelectedWiki] = useState(null);
+
     // 模块内部状态
     const [msgContent, setMsgContent] = useState('');
     const [projName, setProjName] = useState('');
@@ -1906,6 +2054,9 @@ const CabinApp = ({
     const sharedInventory = inventory ? inventory.filter(i => i.cabinId === cabin?.id).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)) : [];
 
     const STATUS_OPTIONS = [{ id: 'online', label: '在线', icon: '🟢' },{ id: 'busy', label: '忙碌', icon: '🔴' },{ id: 'sleep', label: '睡觉', icon: '😴' },{ id: 'game', label: '肝动森', icon: '🎮' },{ id: 'work', label: '搬砖', icon: '💻' },{ id: 'food', label: '干饭', icon: '🍜' },{ id: 'fish', label: '摸鱼', icon: '🐟' }];
+
+    // [新增] 切换模块时重置选中的 Wiki
+    useEffect(() => { setSelectedWiki(null); }, [activeModule]);
 
     // --- 星星瓶计算逻辑 ---
     const myReceivedStars = useMemo(() => {
@@ -2231,12 +2382,58 @@ const CabinApp = ({
                     </div>
                 );
             case 'wiki':
+                // [修复]：增加Wiki详情页子视图
+                if (selectedWiki) {
+                    return (
+                        <div className="flex flex-col flex-1 min-h-0 animate-pop h-full relative">
+                            {/* 详情页头部 */}
+                            <div className="flex items-center justify-between mb-4 shrink-0">
+                                <button 
+                                    onClick={() => setSelectedWiki(null)} 
+                                    className="p-2 -ml-2 rounded-full text-gray-500 transition-colors hover:bg-gray-200"
+                                >
+                                    <Icon path={Icons.ArrowLeft} size={24}/>
+                                </button>
+                                <div className="flex items-center gap-3 flex-1">
+                                    <div className="w-10 h-10 rounded-full bg-[#667EEA] flex items-center justify-center text-white shadow-sm"><Icon path={Icons.Bookmark} size={20}/></div>
+                                    <h2 className="text-xl font-black opacity-80">知识详情</h2>
+                                </div>
+                            </div>
+                            
+                            {/* 详情页内容 */}
+                            <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
+                                {selectedWiki.image && (
+                                    <div className="w-full rounded-2xl overflow-hidden shadow-sm mb-4 border-4 border-white bg-gray-100">
+                                        <img src={selectedWiki.image} className="w-full h-auto object-contain" onClick={() => window.open(selectedWiki.image, '_blank')} />
+                                    </div>
+                                )}
+                                <div className="px-2">
+                                    <h1 className="text-2xl font-black text-[#59584D] mb-2 leading-tight">{selectedWiki.title}</h1>
+                                    <div className="text-xs font-bold text-gray-300 mb-6 flex items-center gap-2">
+                                        <Icon path={Icons.Leaf} size={12}/>
+                                        {new Date(selectedWiki.updatedTimestamp || selectedWiki.timestamp || selectedWiki.createdAt).toLocaleDateString()}
+                                    </div>
+                                    <div className="text-sm font-medium text-[#59584D] leading-7 whitespace-pre-wrap select-text">
+                                        {selectedWiki.content || "（没有填写内容）"}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+
+                // [修复]：列表视图（默认），增加点击事件
                 return (
                     <div className="space-y-3">
                         <DetailHeader title="共享知识" icon={Icons.Bookmark} color="#667EEA" />
                         {sharedWiki.length === 0 && <CabinEmptyState icon="📚" text="小屋暂无共享知识" />}
                         {sharedWiki.map((item, i) => (
-                            <div key={item.id} className="nook-card border-l-8 border-[#667EEA] p-4 flex items-center justify-between animate-pop" style={{animationDelay: `${i*30}ms`}}>
+                            <div 
+                                key={item.id} 
+                                onClick={() => setSelectedWiki(item)} // 关键修复：点击查看详情
+                                className="nook-card border-l-8 border-[#667EEA] p-4 flex items-center justify-between animate-pop cursor-pointer hover:bg-indigo-50/50 transition-colors"
+                                style={{animationDelay: `${i*30}ms`}}
+                            >
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><Icon path={Icons.Bookmark} size={20}/></div>
                                     <div className="min-w-0 flex-1">
