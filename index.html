@@ -331,6 +331,7 @@
 			Dice: <><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 8h.01"/><path d="M8 8h.01"/><path d="M8 16h.01"/><path d="M16 16h.01"/><path d="M12 12h.01"/></>,
             Bookmark: <><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></>,
 			Home: <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+			Lightbulb: <><path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/><path d="M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9v1z"/></>,
 			Megaphone: <><path d="M3 11l8-5v12l-8-5H2v-2h1z"/><path d="M11.6 16.8a5 5 0 1 0 5.8-5.8"/></>,
 			Gift: <><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></>,
 			Smile: <><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>,
@@ -449,7 +450,82 @@
                     </div>
                 </div>
             );
-        };
+        };// ==========================================
+// Idea App (灵感捕捉)
+// ==========================================
+// ==========================================
+// Idea App (灵感捕捉 - 私人版)
+// ==========================================
+const IdeaApp = ({ ideas, addIdea, deleteIdea, showFeedback }) => {
+    const [content, setContent] = useState('');
+
+    const handleAdd = () => {
+        if (!content.trim()) return;
+        addIdea(content);
+        setContent('');
+        showFeedback("灵感已捕捉！💡");
+    };
+
+    // 按时间倒序排列
+    const sortedIdeas = [...ideas].sort((a, b) => b.timestamp - a.timestamp);
+
+    return (
+        <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
+            {/* 顶部标题 */}
+            <div className="flex items-center justify-between mb-4 shrink-0">
+                <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-[#ECC94B] rounded-full flex items-center justify-center text-white shadow-md border-2 border-white">
+                        <Icon path={Icons.Lightbulb} size={22} className="text-[#744210]" />
+                    </div>
+                    <h2 className="text-xl font-black opacity-80">灵感气泡</h2>
+                </div>
+            </div>
+
+            {/* 输入区域 */}
+            <div className="nook-card border-l-8 border-[#ECC94B] p-4 mb-4 animate-pop shadow-sm bg-yellow-50/50">
+                <label className="text-xs font-bold text-yellow-600 mb-2 block">捕获一个新的想法...</label>
+                <textarea 
+                    value={content} 
+                    onChange={e => setContent(e.target.value)}
+                    className="w-full bg-white/60 rounded-xl p-3 text-sm font-bold text-[#59584D] placeholder-yellow-300/50 outline-none resize-none h-20 border-2 border-yellow-100 focus:border-[#ECC94B] transition-colors mb-2"
+                    placeholder="比如：把博物馆搬到山顶..."
+                />
+                <div className="flex justify-end items-center">
+                    <button onClick={handleAdd} className="bg-[#ECC94B] text-[#744210] rounded-xl px-4 py-2 font-black text-sm shadow-[0_3px_0_#B7791F] active:shadow-none active:translate-y-[3px] transition-all flex items-center gap-1">
+                        <Icon path={Icons.Plus} size={16}/> 记下
+                    </button>
+                </div>
+            </div>
+
+            {/* 列表区域 */}
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-20 p-1">
+                {sortedIdeas.length === 0 && (
+                    <div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center gap-2">
+                        <div className="text-4xl grayscale opacity-30">💡</div>
+                        脑洞空空如也...
+                    </div>
+                )}
+                
+                {sortedIdeas.map((item, i) => (
+                    <div key={item.id} className="bg-white rounded-[20px] p-4 shadow-sm border border-gray-100 relative group animate-pop hover:scale-[1.01] transition-transform" style={{animationDelay: `${i*50}ms`}}>
+                        <div className="flex items-start gap-3">
+                            <div className="mt-0.5 opacity-50"><Icon path={Icons.Lightbulb} size={16} color="#ECC94B"/></div>
+                            <div className="flex-1">
+                                <p className="text-[#59584D] font-bold text-sm leading-relaxed whitespace-pre-wrap">{item.content}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-[10px] font-bold text-gray-300">{item.date}</span>
+                                </div>
+                            </div>
+                            <button onClick={() => deleteIdea(item.id)} className="text-gray-200 hover:text-red-400 transition-colors p-1">
+                                <Icon path={Icons.Trash} size={16}/>
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
         // ==========================================
 // ==========================================
@@ -900,42 +976,55 @@
 
 		// “今天吃什么” 转盘组件
 		// ==========================================
+		// ==========================================
+		// Decision App (大转盘 - 支持分组版)
+		// ==========================================
 		const DecisionApp = ({ options, addOption, deleteOption, showFeedback }) => {
 		    const [view, setView] = useState('spin'); // 'spin' | 'edit'
-		    const [currentText, setCurrentText] = useState('今天吃什么？');
+		    const [currentGroup, setCurrentGroup] = useState('默认'); // 当前选中的分组
+		    const [currentText, setCurrentText] = useState('开始决定！');
 		    const [isSpinning, setIsSpinning] = useState(false);
 		    const [winner, setWinner] = useState(null);
 		    const [newOpt, setNewOpt] = useState('');
+		    const [newGroupName, setNewGroupName] = useState(''); // 用于创建新分组的输入框
+		    const [isCreatingGroup, setIsCreatingGroup] = useState(false); // 是否正在创建分组
 		
-		    // 默认备选文案，如果用户没有添加任何选项
-		    const defaults = ['麦当劳', '沙县小吃', '便利店', '自己做', '不吃了', '麻辣烫', 'KFC'];
-		    const activeOptions = options.length > 0 ? options.map(o => o.name) : defaults;
+		    // 1. 计算所有可用的分组 (去重)
+		    const availableGroups = useMemo(() => {
+		        const groups = new Set(['默认']); // 始终包含默认
+		        options.forEach(o => {
+		            if (o.group) groups.add(o.group);
+		        });
+		        return Array.from(groups);
+		    }, [options]);
 		
-		    // 核心逻辑：洗牌动画
+		    // 2. 获取当前分组下的选项
+		    const activeOptionsData = options.filter(o => (o.group || '默认') === currentGroup);
+		    
+		    // 3. 提取用于转盘的纯文本列表
+		    const defaults = ['随便', '不选了', '再想一个'];
+		    const activeTexts = activeOptionsData.length > 0 ? activeOptionsData.map(o => o.name) : defaults;
+		
 		    const handleSpin = () => {
 		        if (isSpinning) return;
 		        setIsSpinning(true);
 		        setWinner(null);
 		        
 		        let count = 0;
-		        const totalSpins = 30; // 闪动次数
-		        let speed = 50; // 初始速度 (ms)
+		        const totalSpins = 30;
+		        let speed = 50;
 		
 		        const run = () => {
-		            // 随机显示一个
-		            const randomIdx = Math.floor(Math.random() * activeOptions.length);
-		            setCurrentText(activeOptions[randomIdx]);
+		            const randomIdx = Math.floor(Math.random() * activeTexts.length);
+		            setCurrentText(activeTexts[randomIdx]);
 		            
 		            count++;
 		            if (count < totalSpins) {
-		                // 速度逐渐变慢，制造紧张感
 		                if (count > 20) speed += 30;
 		                setTimeout(run, speed);
 		            } else {
-		                // 结束
 		                setIsSpinning(false);
-		                setWinner(activeOptions[randomIdx]); // 最终结果
-		                // 播放音效或震动（可选）
+		                setWinner(activeTexts[randomIdx]);
 		                if(navigator.vibrate) navigator.vibrate(200); 
 		            }
 		        };
@@ -944,9 +1033,19 @@
 		
 		    const handleAdd = () => {
 		        if(!newOpt.trim()) return;
-		        addOption(newOpt);
+		        // 将新选项加入到【当前选中】的分组
+		        addOption(newOpt, currentGroup);
 		        setNewOpt('');
-		        showFeedback("选项已添加");
+		        showFeedback(`已加入"${currentGroup}"分组`);
+		    };
+		
+		    const handleCreateGroup = () => {
+		        if(!newGroupName.trim()) return;
+		        setCurrentGroup(newGroupName.trim());
+		        setIsCreatingGroup(false);
+		        setNewGroupName('');
+		        setView('edit'); // 切换到编辑模式让用户往新分组加东西
+		        showFeedback(`已切换到新分组：${newGroupName}`);
 		    };
 		
 		    return (
@@ -957,46 +1056,71 @@
 		                    <div className="w-10 h-10 bg-[#FF7D9A] rounded-full flex items-center justify-center text-white shadow-sm border-2 border-white">
 		                        <Icon path={Icons.Dice} size={20} />
 		                    </div>
-		                    <h2 className="text-xl font-black opacity-80">动森大转盘</h2>
+		                    <div className="flex flex-col">
+		                        <h2 className="text-xl font-black opacity-80 leading-none">转盘</h2>
+		                        <span className="text-[10px] font-bold text-[#FF7D9A] bg-white/50 px-1 rounded mt-0.5 self-start">
+		                            {currentGroup}
+		                        </span>
+		                    </div>
 		                </div>
 		                <button onClick={() => setView(view === 'spin' ? 'edit' : 'spin')} className="w-8 h-8 rounded-full bg-white text-gray-500 flex items-center justify-center shadow-sm active:scale-95 transition-all">
 		                    <Icon path={view === 'spin' ? Icons.Edit : Icons.ArrowLeft} size={16}/>
 		                </button>
 		            </div>
 		
+		            {/* 分组选择器 (横向滚动) */}
+		            <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4 shrink-0 pb-1">
+		                {availableGroups.map(g => (
+		                    <button 
+		                        key={g} 
+		                        onClick={() => setCurrentGroup(g)}
+		                        className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border-2 ${currentGroup === g ? 'bg-[#FF7D9A] text-white border-[#FF7D9A] shadow-md' : 'bg-white text-gray-500 border-transparent hover:bg-white/80'}`}
+		                    >
+		                        {g}
+		                    </button>
+		                ))}
+		                <button onClick={() => setIsCreatingGroup(!isCreatingGroup)} className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/50 text-[#FF7D9A] border-2 border-[#FF7D9A]/30 border-dashed hover:bg-white flex items-center gap-1 shrink-0">
+		                    <Icon path={Icons.Plus} size={10}/> 新分组
+		                </button>
+		            </div>
+		
+		            {/* 新建分组输入框 */}
+		            {isCreatingGroup && (
+		                <div className="mb-4 flex gap-2 animate-pop">
+		                    <input 
+		                        autoFocus
+		                        value={newGroupName}
+		                        onChange={e => setNewGroupName(e.target.value)}
+		                        placeholder="输入新分组名称..."
+		                        className="flex-1 nook-input py-2 text-sm"
+		                    />
+		                    <button onClick={handleCreateGroup} className="bg-[#FF7D9A] text-white px-4 rounded-xl font-bold text-sm shadow-sm active:scale-95">确定</button>
+		                </div>
+		            )}
+		
 		            {/* 界面 1: 转盘区 */}
 		            {view === 'spin' && (
 		                <div className="flex-1 flex flex-col items-center justify-center pb-10 animate-pop">
-		                    {/* 结果显示框 - 模仿动森对话框 */}
 		                    <div className={`relative w-full aspect-square max-h-[260px] bg-[#FDFDF6] rounded-[40px] border-[8px] flex items-center justify-center p-6 text-center shadow-xl transition-all duration-200 ${winner ? 'border-[#FF7D9A] scale-105' : 'border-[#3DAA86]'}`}>
-		                        {/* 装饰性背景点缀 */}
 		                        <div className="absolute inset-4 border-2 border-dashed border-gray-200 rounded-[30px] pointer-events-none opacity-50"></div>
-		                        
 		                        <div className="relative z-10">
-		                            {winner && <div className="text-xs font-black text-[#FF7D9A] mb-2 animate-bounce">狸克建议你选择：</div>}
+		                            {winner && <div className="text-xs font-black text-[#FF7D9A] mb-2 animate-bounce">结果是：</div>}
 		                            <div className={`font-black text-[#59584D] break-words leading-tight transition-all ${isSpinning ? 'text-4xl opacity-50 blur-[1px]' : 'text-5xl scale-110'}`}>
 		                                {currentText}
 		                            </div>
 		                        </div>
-		
-		                        {/* 赢家标记 */}
-		                        {winner && (
-		                            <div className="absolute -bottom-4 bg-[#FF7D9A] text-white px-4 py-1 rounded-full text-xs font-bold shadow-md animate-pop">
-		                                决定就是它了！
-		                            </div>
-		                        )}
 		                    </div>
 		
-		                    <div className="mt-12 w-full px-4">
+		                    <div className="mt-8 w-full px-4">
 		                        <button 
 		                            onClick={handleSpin} 
 		                            disabled={isSpinning}
 		                            className={`nook-btn w-full py-5 text-xl tracking-widest shadow-[0_6px_0_#2D8666] transition-all ${isSpinning ? 'opacity-80 translate-y-1.5 shadow-none cursor-wait' : 'hover:scale-[1.02] active:translate-y-1.5 active:shadow-none'}`}
 		                        >
-		                            {isSpinning ? '抽取中...' : 'SPIN!'}
+		                            {isSpinning ? '...' : 'SPIN!'}
 		                        </button>
 		                        <p className="text-center text-[10px] text-gray-400 font-bold mt-4 opacity-60">
-		                            {options.length === 0 ? '* 当前使用默认列表，点击右上角编辑' : '* 从你的自定义列表中抽取'}
+		                            当前分组：{currentGroup} ({activeOptionsData.length} 个选项)
 		                        </p>
 		                    </div>
 		                </div>
@@ -1005,13 +1129,13 @@
 		            {/* 界面 2: 编辑列表 */}
 		            {view === 'edit' && (
 		                <div className="flex-1 flex flex-col min-h-0 animate-pop">
-		                    <div className="nook-card p-2 mb-4 flex gap-2">
+		                    <div className="nook-card p-2 mb-4 flex gap-2 border-l-4 border-[#FF7D9A]">
 		                        <input 
 		                            value={newOpt} 
 		                            onChange={e => setNewOpt(e.target.value)}
 		                            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-		                            className="flex-1 bg-transparent px-2 font-bold text-[#59584D] outline-none placeholder-gray-300" 
-		                            placeholder="输入新选项 (如: 麻辣烫)"
+		                            className="flex-1 bg-transparent px-2 font-bold text-[#59584D] outline-none placeholder-gray-300 text-sm" 
+		                            placeholder={`添加到 "${currentGroup}"...`}
 		                        />
 		                        <button onClick={handleAdd} className="bg-[#3DAA86] text-white rounded-lg w-8 h-8 flex items-center justify-center shadow-sm active:scale-95">
 		                            <Icon path={Icons.Plus} size={18}/>
@@ -1019,12 +1143,12 @@
 		                    </div>
 		
 		                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-6">
-		                        {options.length === 0 && (
+		                        {activeOptionsData.length === 0 && (
 		                            <div className="text-center text-gray-400 py-8 text-xs font-bold opacity-50">
-		                                列表为空，将使用默认选项。
+		                                "{currentGroup}" 分组暂无选项。<br/>请在上方添加。
 		                            </div>
 		                        )}
-		                        {options.map((opt, i) => (
+		                        {activeOptionsData.map((opt, i) => (
 		                            <div key={opt.id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center border border-gray-100 animate-pop" style={{animationDelay: `${i*30}ms`}}>
 		                                <span className="font-bold text-[#59584D] ml-2">{opt.name}</span>
 		                                <button onClick={() => deleteOption(opt.id)} className="text-gray-300 hover:text-red-400 p-2">
@@ -1038,290 +1162,170 @@
 		        </div>
 		    );
 		};
-        const LedgerApp = ({ ledger, addRecord, deleteRecord, showFeedback, settleMonthlySalary, stats }) => {
-            const [view, setView] = useState('list'); 
-            const [timeView, setTimeView] = useState('month'); 
-            const [type, setType] = useState('expense'); 
-            const [amount, setAmount] = useState(''); 
-            const [category, setCategory] = useState('其他'); 
-            const [note, setNote] = useState('');
-            const [isPending, setIsPending] = useState(false); 
-            
-            // [新增状态] 记录结算视图中，哪些待结算记录被选中
-            const [selectedPendingIds, setSelectedPendingIds] = useState([]);
-        
-            const categories = type === 'expense' ? ['吃饭', '零食', '娱乐', '生活', '交通', '服饰', '日用品'] : ['工作', '利息', '其他'];
-            
-            // 筛选待结算记录的逻辑 (用于结算视图)
-            const pendingSalaryRecords = useMemo(() => {
-                // 筛选所有待结算的工资记录
-                return ledger.filter(r => r.isPending === true && r.isSalary === true);
-            }, [ledger]);
-        
-            // 动态计算：选中的预计总额
-            const selectedExpectedTotal = useMemo(() => {
-                return pendingSalaryRecords
-                    .filter(r => selectedPendingIds.includes(r.id))
-                    .reduce((sum, r) => sum + r.amount, 0);
-            }, [pendingSalaryRecords, selectedPendingIds]);
-        
-            const canSettle = pendingSalaryRecords.length > 0;
-            
-            const filteredLedger = useMemo(() => {
-                const now = new Date();
-                return ledger.filter(r => {
-                    const d = new Date(r.timestamp);
-                    if (timeView === 'day') return d.toDateString() === now.toDateString();
-                    else if (timeView === 'week') return d >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                    else return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                });
-            }, [ledger, timeView]);
-        
-            const summary = useMemo(() => {
-                let inc = 0, exp = 0;
-                filteredLedger.forEach(r => {
-                     if (r.type === 'income' && !r.isPending) {
-                         inc += Number(r.amount);
-                     } else if (r.type === 'expense') {
-                         exp += Number(r.amount);
-                     }
-                });
-                return { income: inc, expense: exp, balance: inc - exp };
-            }, [filteredLedger]);
-        
-            const handleAdd = () => { 
-                if(!amount) return alert("请输入金额"); 
-                addRecord(type, Number(amount), category, note, isPending); 
-                setAmount(''); 
-                setNote(''); 
-                setIsPending(false); 
-                setView('list'); 
-                showFeedback(isPending ? "预计收入已记录" : "记账成功！"); 
-            };
-        
-            const handleDelete = (id) => { if (confirm("删除此账单？")) { deleteRecord(id); showFeedback("账单已删除", "error"); } };
-            const getSummaryTitle = () => { if (timeView === 'day') return '今日结余'; if (timeView === 'week') return '近7天结余'; return '本月结余'; };
-            
-            // [新增] 切换选中状态
-            const togglePendingSelect = (id) => {
-                setSelectedPendingIds(prev => 
-                    prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
-                );
-            };
-            
-            // [新增] 处理结算入账
-            const handleSettle = () => {
-                if (selectedPendingIds.length === 0) {
-                    return alert("请至少选择一笔待结算记录。");
-                }
+        // ==========================================
+                // LedgerApp (记账本 - 无预结算简化版)
+                // ==========================================
+                const LedgerApp = ({ ledger, addRecord, deleteRecord, showFeedback }) => {
+                    const [view, setView] = useState('list'); 
+                    const [timeView, setTimeView] = useState('month'); 
+                    const [type, setType] = useState('expense'); 
+                    const [amount, setAmount] = useState(''); 
+                    const [category, setCategory] = useState('其他'); 
+                    const [note, setNote] = useState('');
                 
-                const recordsToClear = pendingSalaryRecords.filter(r => selectedPendingIds.includes(r.id));
-                const finalAmount = Number(amount) || selectedExpectedTotal;
-        
-                settleMonthlySalary(finalAmount, recordsToClear);
-                
-                // 重置状态
-                setAmount('');
-                setSelectedPendingIds([]);
-                setView('list');
-            };
-        
-            // --- 渲染新增/编辑视图 ---
-            if (view === 'add') return (
-                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
-                    <div className="flex items-center gap-2 mb-4 shrink-0">
-                        <button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button>
-                        <h2 className="text-xl font-black opacity-80">记一笔</h2>
-                    </div>
+                    const categories = type === 'expense' 
+                        ? ['吃饭', '零食', '娱乐', '生活', '交通', '服饰', '日用品'] 
+                        : ['工作', '利息', '卖大头菜', '其他'];
                     
-                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
-                        {/* 收入/支出切换 */}
-                        <div className="flex bg-gray-200 p-1 rounded-xl">
-                            <button onClick={()=>{setType('expense'); setIsPending(false);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='expense'?'bg-white text-red-500 shadow-sm scale-95':'text-gray-500'}`}>支出</button>
-                            <button onClick={()=>{setType('income'); setCategory('工作');}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='income'?'bg-white text-green-500 shadow-sm scale-95':'text-gray-500'}`}>收入</button>
-                        </div>
-                        
-                        {/* 预计收入开关 */}
-                        {type === 'income' && category === '工作' && (
-                            <div className="nook-card flex items-center justify-between p-4 border-l-8 border-[#3DAA86]">
-                                <div>
-                                    <div className="font-bold text-[#59584D] text-sm">标记为预计收入 (待结算)</div>
-                                    <div className="text-xs text-gray-400">工资收入请先标记为“预计”</div>
-                                </div>
-                                <label className="nook-switch scale-75">
-                                    <input type="checkbox" checked={isPending} onChange={e=>setIsPending(e.target.checked)}/>
-                                    <span className="slider bg-gray-200"></span>
-                                </label>
-                            </div>
-                        )}
+                    // 根据时间筛选
+                    const filteredLedger = useMemo(() => {
+                        const now = new Date();
+                        return ledger.filter(r => {
+                            const d = new Date(r.timestamp);
+                            if (timeView === 'day') return d.toDateString() === now.toDateString();
+                            else if (timeView === 'week') return d >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                            else return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                        });
+                    }, [ledger, timeView]);
+                
+                    // 统计结余
+                    const summary = useMemo(() => {
+                        let inc = 0, exp = 0;
+                        filteredLedger.forEach(r => {
+                             if (r.type === 'income') {
+                                 inc += Number(r.amount);
+                             } else if (r.type === 'expense') {
+                                 exp += Number(r.amount);
+                             }
+                        });
+                        return { income: inc, expense: exp, balance: inc - exp };
+                    }, [filteredLedger]);
+                
+                    const handleAdd = () => { 
+                        if(!amount) return alert("请输入金额"); 
+                        // 直接添加，不传 isPending
+                        addRecord(type, Number(amount), category, note); 
+                        setAmount(''); 
+                        setNote(''); 
+                        setView('list'); 
+                        showFeedback("记账成功！"); 
+                    };
+                
+                    const handleDelete = (id) => { 
+                        if (confirm("删除此账单？金额将自动还原。")) { 
+                            deleteRecord(id); 
+                        } 
+                    };
         
-                        <div className="nook-card">
-                            <label className="text-xs font-bold text-gray-400 mb-1 block">金额</label>
-                            <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} className="w-full text-3xl font-black bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="0"/>
+                    const getSummaryTitle = () => { 
+                        if (timeView === 'day') return '今日结余'; 
+                        if (timeView === 'week') return '近7天结余'; 
+                        return '本月结余'; 
+                    };
+                    
+                    // --- 渲染新增/编辑视图 ---
+                    if (view === 'add') return (
+                        <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
+                            <div className="flex items-center gap-2 mb-4 shrink-0">
+                                <button onClick={()=>setView('list')} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button>
+                                <h2 className="text-xl font-black opacity-80">记一笔</h2>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
+                                {/* 收入/支出切换 */}
+                                <div className="flex bg-gray-200 p-1 rounded-xl">
+                                    <button onClick={()=>{setType('expense');}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='expense'?'bg-white text-red-500 shadow-sm scale-95':'text-gray-500'}`}>支出</button>
+                                    <button onClick={()=>{setType('income'); setCategory('工作');}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${type==='income'?'bg-white text-green-500 shadow-sm scale-95':'text-gray-500'}`}>收入</button>
+                                </div>
+                
+                                <div className="nook-card">
+                                    <label className="text-xs font-bold text-gray-400 mb-1 block">金额</label>
+                                    <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} className="w-full text-3xl font-black bg-transparent outline-none border-b-2 border-gray-100 py-2" placeholder="0"/>
+                                </div>
+                                
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择分类</label>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {categories.map(c => (
+                                            <button key={c} onClick={()=>setCategory(c)} className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${category===c?'border-[#3DAA86] bg-white text-[#3DAA86] scale-95':'border-transparent bg-white/50 text-gray-500'}`}>
+                                                {c}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div className="nook-card p-3">
+                                    <input value={note} onChange={e=>setNote(e.target.value)} className="w-full bg-transparent outline-none text-sm font-bold placeholder-gray-300" placeholder="添加备注 (选填)"/>
+                                </div>
+                                
+                                <button onClick={handleAdd} className="nook-btn w-full flex justify-center mt-4">
+                                    完成记账
+                                </button>
+                            </div>
                         </div>
-                        
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 mb-2 block ml-2">选择分类</label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {categories.map(c => (
-                                    <button key={c} onClick={()=>setCategory(c)} className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${category===c?'border-[#3DAA86] bg-white text-[#3DAA86] scale-95':'border-transparent bg-white/50 text-gray-500'}`}>
-                                        {c}
-                                    </button>
+                    );
+                    
+                    // --- 渲染列表主视图 ---
+                    return (
+                        <div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full">
+                            {/* 顶部标题 */}
+                            <div className="flex items-center justify-between mb-4 shrink-0">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-10 h-10 bg-[#FFD166] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Book} /></div>
+                                    <h2 className="text-xl font-black opacity-80">记账本</h2>
+                                </div>
+                            </div>
+                            
+                            {/* 时间切换 */}
+                            <div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm shrink-0">
+                                {['day', 'week', 'month'].map(t => (<button key={t} onClick={()=>setTimeView(t)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView===t?'bg-white text-[#3DAA86] shadow-sm scale-95':'text-gray-500'}`}>{t==='day' ? '今日' : (t==='week' ? '近7天' : '本月')}</button>))}
+                            </div>
+                            
+                            {/* 统计卡片 */}
+                            <div className="bg-[#3D405B] rounded-[24px] p-5 text-[#F4F1DE] shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0 transition-transform hover:scale-[1.02]">
+                                <div className="absolute right-0 bottom-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mb-6"></div>
+                                <div>
+                                    <div className="text-[10px] opacity-60 font-bold mb-1">{getSummaryTitle()}</div>
+                                    <div className="text-2xl font-black tracking-wide">{summary.balance.toLocaleString()}</div>
+                                </div>
+                                <div className="text-right space-y-1">
+                                    <div><span className="text-[10px] bg-green-500/20 text-green-300 px-1.5 rounded mr-1">收</span><span className="text-sm font-bold">{summary.income.toLocaleString()}</span></div>
+                                    <div><span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 rounded mr-1">支</span><span className="text-sm font-bold">{summary.expense.toLocaleString()}</span></div>
+                                </div>
+                            </div>
+                            
+                            {/* 列表和添加按钮 */}
+                            <button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一笔</button>
+                            
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
+                                {filteredLedger.length === 0 && (<div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center"><div className="text-2xl mb-2">📒</div>{timeView === 'day' ? '今天暂无账单' : '暂无记录'}</div>)}
+                                {filteredLedger.map((item, i) => (
+                                    <div key={item.id} className={`bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group animate-pop ${item.type === 'expense' ? 'border-l-8 border-red-400' : 'border-l-8 border-green-400'}`} style={{animationDelay: `${i*50}ms`}}>
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm ${item.type==='expense'?'bg-red-400':'bg-green-400'}`}>
+                                                {item.category.substring(0,2)}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-[#59584D] text-sm">
+                                                    {item.category} <span className="text-xs font-normal text-gray-400 ml-1">{item.note}</span>
+                                                </div>
+                                                <div className="text-[10px] text-gray-400 font-bold">
+                                                    {item.date}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`font-black ${item.type==='expense'?'text-red-500':'text-green-500'}`}>
+                                                {item.type==='expense'?'-':'+'}{item.amount.toLocaleString()}
+                                            </span>
+                                            <button onClick={()=>handleDelete(item.id)} className="text-gray-300 hover:text-red-400 transition transform hover:scale-110"><Icon path={Icons.Trash} size={14}/></button>
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         </div>
-                        
-                        <div className="nook-card p-3">
-                            <input value={note} onChange={e=>setNote(e.target.value)} className="w-full bg-transparent outline-none text-sm font-bold placeholder-gray-300" placeholder="添加备注 (选填)"/>
-                        </div>
-                        
-                        <button onClick={handleAdd} className="nook-btn w-full flex justify-center mt-4">
-                            {isPending ? '记录预计收入' : '完成记账'}
-                        </button>
-                    </div>
-                </div>
-            );
-            
-            // --- 渲染结算视图 ---
-            if (view === 'settle_view') return (
-                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full">
-                    <div className="flex items-center gap-2 mb-4 shrink-0">
-                        <button onClick={()=>{setView('list'); setAmount(''); setSelectedPendingIds([]);}} className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><Icon path={Icons.ArrowLeft} size={24}/></button>
-                        <h2 className="text-xl font-black opacity-80">月度工资结算</h2>
-                    </div>
-                    
-                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
-                        
-                        {/* 待结算记录清单 (可勾选) */}
-                        <div className="nook-card p-4">
-                            <h3 className="text-sm font-bold text-gray-500 mb-3">选择本次结算记录 ({selectedPendingIds.length} 笔)</h3>
-                            <div className='space-y-2'>
-                                {pendingSalaryRecords.map(r => {
-                                    const isSelected = selectedPendingIds.includes(r.id);
-                                    return (
-                                        <div 
-                                            key={r.id} 
-                                            onClick={() => togglePendingSelect(r.id)}
-                                            className={`flex justify-between items-center p-3 rounded-xl border-2 transition-all cursor-pointer ${isSelected ? 'bg-green-50 border-green-500 shadow-md' : 'bg-gray-50 border-gray-100 hover:bg-white'}`}
-                                        >
-                                            <div className='flex items-center gap-3'>
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-green-500 border-green-500' : 'border-gray-300 bg-white'}`}>
-                                                    {isSelected && <Icon path={Icons.Check} size={12} className="text-white"/>}
-                                                </div>
-                                                <div>
-                                                    <span className='text-sm font-bold text-[#59584D]'>{r.note || '预计工资记录'}</span>
-                                                    <div className='text-[10px] text-gray-400'>{r.date}</div>
-                                                </div>
-                                            </div>
-                                            <span className="font-bold text-green-500">+{r.amount.toLocaleString()}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-        
-                        <div className="nook-card border-l-8 border-[#3DAA86] p-4">
-                            <div className="text-lg font-black text-[#59584D]">勾选记录预计总额</div>
-                            <div className="text-3xl font-black text-green-500 mt-1">{selectedExpectedTotal.toLocaleString()}</div>
-                        </div>
-        
-                        {/* 实际核对金额输入 */}
-                        <div className="nook-card border-l-8 border-yellow-500 p-4">
-                            <label className="text-sm font-bold text-gray-500 mb-2 block">手动核对：实际结算金额</label>
-                            <input 
-                                type="number" 
-                                value={amount} 
-                                onChange={e => setAmount(e.target.value)} 
-                                onFocus={() => { if (!amount && selectedExpectedTotal > 0) setAmount(selectedExpectedTotal.toString()); }}
-                                className="nook-input text-2xl font-black text-center" 
-                                placeholder={selectedExpectedTotal.toLocaleString()}
-                            />
-                            <p className="text-[10px] text-gray-400 mt-2">（留空则默认按 **勾选记录总额** 入账）</p>
-                        </div>
-                        
-                        {/* 结算按钮 */}
-                        <button 
-                            onClick={handleSettle} 
-                            disabled={selectedPendingIds.length === 0}
-                            className="nook-btn w-full bg-green-500 shadow-[0_5px_0_#2F855A] mt-4"
-                        >
-                            {selectedPendingIds.length > 0 
-                                ? `确认结算并入账 ${ (Number(amount) || selectedExpectedTotal).toLocaleString() } 铃钱`
-                                : '请选择待结算记录'}
-                        </button>
-                    </div>
-                </div>
-            );
-        
-            // --- 渲染列表主视图 ---
-            return (
-                <div className="flex flex-col flex-1 min-h-0 screen-enter relative h-full">
-                    {/* 顶部标题 */}
-                    <div className="flex items-center justify-between mb-4 shrink-0">
-                        <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-[#FFD166] rounded-full flex items-center justify-center text-white"><Icon path={Icons.Book} /></div>
-                            <h2 className="text-xl font-black opacity-80">记账本</h2>
-                        </div>
-                        {/* 结算入口按钮 - 依赖 canSettle 渲染 */}
-                        {canSettle && (
-                            <button onClick={() => { setView('settle_view'); setSelectedPendingIds(pendingSalaryRecords.map(r => r.id)); }} className="bg-red-500 text-white text-xs font-bold px-3 py-2 rounded-full shadow-md animate-pop active:scale-95 transition-all">
-                                🔔 {pendingSalaryRecords.length} 笔待结算
-                            </button>
-                        )}
-                    </div>
-                    
-                    {/* 时间切换 */}
-                    <div className="flex bg-white/50 p-1 rounded-xl mb-4 backdrop-blur-sm shrink-0">
-                        {['day', 'week', 'month'].map(t => (<button key={t} onClick={()=>setTimeView(t)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${timeView===t?'bg-white text-[#3DAA86] shadow-sm scale-95':'text-gray-500'}`}>{t==='day' ? '今日' : (t==='week' ? '近7天' : '本月')}</button>))}
-                    </div>
-                    
-                    {/* 统计卡片 */}
-                    <div className="bg-[#3D405B] rounded-[24px] p-5 text-[#F4F1DE] shadow-lg mb-4 flex justify-between items-center relative overflow-hidden shrink-0 transition-transform hover:scale-[1.02]">
-                        <div className="absolute right-0 bottom-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mb-6"></div>
-                        <div>
-                            <div className="text-[10px] opacity-60 font-bold mb-1">{getSummaryTitle()}</div>
-                            <div className="text-2xl font-black tracking-wide">{summary.balance.toLocaleString()}</div>
-                        </div>
-                        <div className="text-right space-y-1">
-                            <div><span className="text-[10px] bg-green-500/20 text-green-300 px-1.5 rounded mr-1">收</span><span className="text-sm font-bold">{summary.income.toLocaleString()}</span></div>
-                            <div><span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 rounded mr-1">支</span><span className="text-sm font-bold">{summary.expense.toLocaleString()}</span></div>
-                        </div>
-                    </div>
-                    
-                    {/* 列表和添加按钮 */}
-                    <button onClick={()=>setView('add')} className="absolute bottom-6 right-2 bg-[#3DAA86] text-white px-4 py-3 rounded-full shadow-xl hover:bg-[#2F855A] transition active:scale-95 flex items-center gap-2 z-30 font-bold animate-pop"><Icon path={Icons.Plus} size={18}/> 记一笔</button>
-                    
-                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
-                        {filteredLedger.length === 0 && (<div className="text-center text-gray-400 py-10 text-xs font-bold opacity-50 flex flex-col items-center"><div className="text-2xl mb-2">📒</div>{timeView === 'day' ? '今天暂无账单' : '暂无记录'}</div>)}
-                        {filteredLedger.map((item, i) => (
-                            <div key={item.id} className={`bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center group animate-pop ${item.isPending ? 'border-l-8 border-yellow-400' : (item.type === 'expense' ? 'border-l-8 border-red-400' : 'border-l-8 border-green-400')}`} style={{animationDelay: `${i*50}ms`}}>
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm ${item.isPending ? 'bg-yellow-400' : (item.type==='expense'?'bg-red-400':'bg-green-400')}`}>
-                                        {item.isPending ? '待' : item.category.substring(0,2)}
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-[#59584D] text-sm">
-                                            {item.category} <span className="text-xs font-normal text-gray-400 ml-1">{item.note}</span>
-                                        </div>
-                                        <div className="text-[10px] text-gray-400 font-bold">
-                                            {item.date} {item.isPending && '(预计收入)'}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span className={`font-black ${item.isPending ? 'text-yellow-500' : (item.type==='expense'?'text-red-500':'text-green-500')}`}>
-                                        {item.isPending ? '+' : (item.type==='expense'?'-':'+')}{item.amount.toLocaleString()}
-                                    </span>
-                                    {!item.isPending && ( // 只有非待结算记录才能删除，避免误删工资
-                                        <button onClick={()=>handleDelete(item.id)} className="text-gray-300 hover:text-red-400 transition transform hover:scale-110"><Icon path={Icons.Trash} size={14}/></button>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
+                    );
+                };
 
         // ==========================================
         // VoiceWorkApp 组件 (录音助手 - 修正后的版本)
@@ -1857,6 +1861,12 @@ const FinanceHistoryApp = ({ ledger, stats, setCurrentApp, showFeedback }) => {
         </div>
     );
 };
+// ==========================================
+// CabinApp 组件 (最终修正版：星星瓶显示总数)
+// ==========================================
+
+
+
 const CabinApp = ({ 
     user, cabin, tasks, shoppingItems, wikiItems, messages, projects, inventory, 
     starJar, 
@@ -1866,16 +1876,16 @@ const CabinApp = ({
     updateStatus, addStar, clearStars, 
     showFeedback, memberCount, stats 
 }) => {
-    // 【修正】activeModule 状态定义
+    // 状态定义
     const [view, setView] = useState(cabin ? 'dashboard' : 'welcome'); 
-    const [activeModule, setActiveModule] = useState(null); // <-- 确保 activeModule 状态被定义
+    const [activeModule, setActiveModule] = useState(null); 
     const [inputName, setInputName] = useState('');
     const [inputCode, setInputCode] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [members, setMembers] = useState([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
     
-    // 状态
+    // 模块内部状态
     const [msgContent, setMsgContent] = useState('');
     const [projName, setProjName] = useState('');
     const [projGoal, setProjGoal] = useState('');
@@ -1897,7 +1907,7 @@ const CabinApp = ({
 
     const STATUS_OPTIONS = [{ id: 'online', label: '在线', icon: '🟢' },{ id: 'busy', label: '忙碌', icon: '🔴' },{ id: 'sleep', label: '睡觉', icon: '😴' },{ id: 'game', label: '肝动森', icon: '🎮' },{ id: 'work', label: '搬砖', icon: '💻' },{ id: 'food', label: '干饭', icon: '🍜' },{ id: 'fish', label: '摸鱼', icon: '🐟' }];
 
-    // --- 星星瓶计算逻辑 (依赖于 starJar prop) ---
+    // --- 星星瓶计算逻辑 ---
     const myReceivedStars = useMemo(() => {
         return starJar.filter(s => s.recipientId === user.id);
     }, [starJar, user.id]); 
@@ -1906,7 +1916,7 @@ const CabinApp = ({
         return starJar.filter(s => s.senderId === user.id);
     }, [starJar, user.id]); 
 
-    // 周报数据计算 (保持不变)
+    // 周报数据计算
     const weeklyReport = useMemo(() => {
         if (!cabin) return null;
         const now = new Date();
@@ -1967,7 +1977,7 @@ const CabinApp = ({
     }, [members, user.id, recipientId]);
 
 
-    // --- Actions (保持不变) ---
+    // --- Actions ---
     const handleAddStar = () => {
         if (!recipientId || recipientId === user.id) {
             return showFeedback("请先选择发送星星的对象！", "error");
@@ -2009,13 +2019,13 @@ const CabinApp = ({
         const today = new Date().setHours(0,0,0,0);
         const stored = new Date(d).setHours(0,0,0,0);
         const diff = today - stored;
-        if (diff < 0) return 0; // 避免未来日期出现负值
+        if (diff < 0) return 0; 
         return Math.floor(diff / (86400000)); 
     };
     const getStatusIcon = (sid) => STATUS_OPTIONS.find(s => s.id === sid)?.icon || '🟢';
 
 
-    // 欢迎界面 (保持不变)
+    // 欢迎界面
     if (!cabin) return (<div className="flex flex-col flex-1 min-h-0 screen-enter h-full items-center justify-center p-6 pb-20"><div className="w-20 h-20 bg-[#FF9F43] rounded-full flex items-center justify-center text-white shadow-lg mb-4 animate-bounce"><Icon path={Icons.Home} size={40}/></div><h2 className="text-2xl font-black text-[#59584D] mb-2">Nook 小屋</h2><p className="text-sm text-gray-500 font-bold mb-8 text-center">你的线上共享岛屿</p><div className="w-full max-w-xs space-y-6"><div className="nook-card animate-pop"><h3 className="font-bold text-[#59584D] mb-2 text-center">创建新小屋</h3><input value={inputName} onChange={e=>setInputName(e.target.value)} className="nook-input mb-3 text-center" placeholder="给小屋起个名字"/><button onClick={handleCreate} disabled={isLoading} className="nook-btn w-full bg-[#FF9F43] shadow-[0_5px_0_#E67E22]">{isLoading?'...':'创建'}</button></div><div className="relative flex justify-center"><span className="bg-[#7FE2C3] px-2 text-white font-bold text-xs">OR</span></div><div className="nook-card animate-pop" style={{animationDelay:'100ms'}}><h3 className="font-bold text-[#59584D] mb-2 text-center">加入小屋</h3><input value={inputCode} onChange={e=>setInputCode(e.target.value)} className="nook-input mb-3 text-center" placeholder="输入邀请码"/><button onClick={handleJoin} disabled={isLoading} className="nook-btn-secondary w-full bg-white">{isLoading?'...':'加入'}</button></div></div></div>);
 
     
@@ -2032,7 +2042,6 @@ const CabinApp = ({
 
     // --- 渲染模块详细内容 ---
     const renderModuleDetail = () => {
-        // [辅助函数] 渲染详情头，包含返回按钮
         const DetailHeader = ({ title, icon, color }) => (
             <div className="flex items-center justify-between mb-4 shrink-0">
                 <button 
@@ -2045,7 +2054,6 @@ const CabinApp = ({
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm`} style={{ backgroundColor: color }}><Icon path={icon} size={20}/></div>
                     <h2 className="text-xl font-black opacity-80">{title}</h2>
                 </div>
-                {/* 占位符或特定操作按钮 */}
                 <div className="w-8"></div>
             </div>
         );
@@ -2101,7 +2109,6 @@ const CabinApp = ({
                 return (
                     <div className='space-y-3'>
                         <DetailHeader title="收纳箱" icon={Icons.Box} color="#4299E1" />
-                        {/* 顶部添加卡片 - 重新设计，更紧凑 */}
                         <div className="nook-card border-l-8 border-[#4299E1] p-4 flex flex-col gap-3 animate-pop">
                             <h4 className='text-xs font-bold text-gray-400'>快速存入收纳箱</h4>
                             <div className="flex gap-2 items-center">
@@ -2114,7 +2121,6 @@ const CabinApp = ({
                             </div>
                         </div>
 
-                        {/* 列表 */}
                         <div className="space-y-2">
                             {sharedInventory.length === 0 && <CabinEmptyState icon="📦" text="收纳箱是空的，快去存点东西吧" />}
                             {sharedInventory.map((item, i) => { 
@@ -2149,7 +2155,6 @@ const CabinApp = ({
                 return (
                     <div className='space-y-4'>
                         <DetailHeader title="募捐计划" icon={Icons.Gift} color="#E53E3E" />
-                        {/* 发起募捐卡片 - 突出显示 */}
                         <div className="nook-card border-2 border-dashed border-[#E53E3E] bg-red-50/50 p-4 animate-pop">
                             <h4 className="text-xs font-bold text-red-500 mb-3 text-center">发起新的募捐计划</h4>
                             <div className="flex flex-col gap-2">
@@ -2161,7 +2166,6 @@ const CabinApp = ({
                             </div>
                         </div>
                         
-                        {/* 募捐项目列表 */}
                         {sharedProjects.length === 0 && <CabinEmptyState icon="🎁" text="暂无募捐项目" />}
                         {sharedProjects.map((p, i) => { 
                             const percent = Math.min(100, (p.current / p.goal) * 100); 
@@ -2207,13 +2211,11 @@ const CabinApp = ({
                 return (
                     <div className='space-y-3'>
                         <DetailHeader title="公告留言" icon={Icons.Megaphone} color="#F59E0B" />
-                        {/* 留言输入卡片 */}
                         <div className="nook-card border-l-8 border-[#F59E0B] p-4 flex gap-3 animate-pop">
                             <textarea value={msgContent} onChange={e=>setMsgContent(e.target.value)} placeholder="发布新公告..." className="flex-1 bg-[#FFFBEB] rounded-lg p-2 text-sm font-bold text-[#92400E] placeholder-[#D97706]/50 outline-none resize-none h-16 border-2 border-yellow-100 focus:border-[#F59E0B] transition-colors"/>
                             <button onClick={handlePostMsg} className="bg-[#F59E0B] text-white rounded-xl w-10 h-10 flex items-center justify-center shadow-sm active:scale-95 shrink-0 self-start"><Icon path={Icons.Send} size={16}/></button>
                         </div>
 
-                        {/* 留言列表 - 采用瀑布流或网格，这里使用网格 */}
                         <div className="grid grid-cols-2 gap-3">
                             {sharedMessages.length === 0 && <CabinEmptyState icon="📢" text="暂无公告" />}
                             {sharedMessages.map((m, i) => (
@@ -2251,12 +2253,10 @@ const CabinApp = ({
                 return (
                     <div className="space-y-4 animate-pop">
                         <DetailHeader title="岛务周报" icon={Icons.Clipboard} color="#805AD5" />
-                        {/* 标题卡片 */}
                         <div className="nook-card border-l-8 border-[#805AD5] bg-gradient-to-r from-purple-50 to-white">
                             <p className="text-xs text-gray-400 font-bold">过去 7 天的岛屿生活记录</p>
                         </div>
 
-                        {/* 本周数据概览 */}
                         <div className="grid grid-cols-2 gap-3">
                             <div className="nook-card border-2 border-green-100 text-center">
                                 <div className="text-3xl font-black text-[#3DAA86]">{weeklyReport?.totalCompleted}</div>
@@ -2268,7 +2268,6 @@ const CabinApp = ({
                             </div>
                         </div>
 
-                        {/* 家务之星 MVP */}
                         {weeklyReport?.mvpUser ? (
                             <div className="bg-gradient-to-br from-[#FFFBEB] to-white p-4 rounded-3xl shadow-md border-4 border-yellow-200 relative overflow-hidden text-center">
                                 <div className="absolute top-0 left-0 w-full h-2 bg-yellow-300"></div>
@@ -2284,7 +2283,6 @@ const CabinApp = ({
                             <CabinEmptyState icon="🏅" text="本周还没有产生家务之星哦" />
                         )}
 
-                        {/* 活跃度柱状图 - 优化布局 */}
                         <div className="nook-card p-5">
                             <h4 className="text-xs font-bold text-gray-400 mb-4 ml-1">活跃度统计 (任务完成数)</h4>
                             <div className="flex items-end justify-around gap-2 h-32 px-2 pb-2">
@@ -2306,10 +2304,14 @@ const CabinApp = ({
                     </div>
                 );
             case 'starjar':
+                 // [新增] 统计自己收到的总星星数
+                 const totalReceived = myReceivedStars.reduce((sum, s) => sum + (s.stars || 0), 0);
+
                  return (
                     <div className="flex flex-col flex-1 min-h-0 animate-pop h-full relative">
                         <DetailHeader title="星星瓶" icon={Icons.Star} color="#FF9F43" />
                         
+                        {/* 顶部成员选择 (发送给谁) */}
                         {cabin && members.length > 1 && (
                              <div className='flex flex-wrap gap-2 mb-4 items-center shrink-0 justify-center'>
                                 <span className='text-xs font-bold text-gray-500 shrink-0'>发送给：</span>
@@ -2326,7 +2328,7 @@ const CabinApp = ({
                         )}
 
                         <div className='grid grid-cols-1 md:grid-cols-2 gap-3 flex-1'>
-                            {/* A. 发送星星区域 */}
+                            {/* A. 发送区：显示发给【当前选中对象】的数量 */}
                             <div className='nook-card p-4 border-2 border-dashed border-[#FF9F43] text-center relative overflow-hidden flex flex-col justify-center min-h-[180px]'>
                                 <div className='text-[10px] font-black text-gray-400 mb-3'>你的思念（已发送）</div>
                                 <div className='text-6xl font-black text-[#FF9F43] mb-4'>
@@ -2340,24 +2342,39 @@ const CabinApp = ({
                                 >
                                     <Icon path={Icons.Star} size={16}/> 放一颗星星
                                 </button>
+                                {!recipientId && <div className="text-[9px] text-gray-400 mt-2">请先在上方选择发送对象</div>}
                             </div>
                             
-                            {/* B. 接收星星区域 */}
+                            {/* B. 接收区：显示【我收到的总数】 */}
                             <div className='nook-card p-4 border-2 border-dashed border-[#667EEA] relative overflow-hidden flex flex-col min-h-[180px]'>
-                                <div className='text-[10px] font-black text-gray-400 mb-1'>Ta们想你了（收件箱）</div>
-                                <div className='flex-1 overflow-y-auto space-y-2 pt-2'>
+                                <div className='text-[10px] font-black text-gray-400 mb-1 text-center'>Ta们想你了（共收到）</div>
+                                
+                                {/* 显示总数 */}
+                                <div className='text-6xl font-black text-[#667EEA] mb-2 text-center'>
+                                    {totalReceived}
+                                </div>
+                                <div className="text-[9px] text-center text-gray-400 mb-3 font-bold border-b border-gray-100 pb-2">
+                                    收件箱详情
+                                </div>
+
+                                <div className='flex-1 overflow-y-auto space-y-2 pt-1 no-scrollbar'>
                                     {myReceivedStars.filter(s => s.stars > 0).length === 0 ? (
-                                        <p className='text-xs text-gray-500'>瓶子空空的... Ta们可能在忙哦。</p>
+                                        <p className='text-xs text-gray-400 text-center py-4'>瓶子空空的...</p>
                                     ) : (
                                         myReceivedStars.filter(s => s.stars > 0).map(s => {
                                             const sender = members.find(m => m.id === s.senderId);
                                             if (!sender) return null;
                                             return (
                                                 <div key={s.senderId} className='flex justify-between items-center bg-indigo-50/50 p-2 rounded-lg animate-pop'>
-                                                    <span className='text-sm font-black text-[#59584D]'>{sender.username}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full overflow-hidden border border-white">
+                                                            <img src={sender.avatar} className="w-full h-full object-cover" alt={sender.username}/>
+                                                        </div>
+                                                        <span className='text-sm font-black text-[#59584D]'>{sender.username}</span>
+                                                    </div>
                                                     <div className='flex items-center gap-2'>
-                                                        <span className='text-xl font-black text-[#667EEA]'>{s.stars}</span>
-                                                        <button onClick={() => handleClearStars(s.senderId, s.stars)} className='bg-[#667EEA] text-white px-3 py-1 rounded-full text-xs font-bold active:scale-95 transition-all'>
+                                                        <span className='text-lg font-black text-[#667EEA]'>+{s.stars}</span>
+                                                        <button onClick={() => handleClearStars(s.senderId, s.stars)} className='bg-[#667EEA] text-white px-3 py-1 rounded-full text-[10px] font-bold active:scale-95 transition-all shadow-sm'>
                                                             收下
                                                         </button>
                                                     </div>
@@ -2377,15 +2394,12 @@ const CabinApp = ({
 
 
     // --- 主渲染逻辑 ---
-    
-    // 如果选中了模块，渲染模块详情页
     if (activeModule) {
         return (
             <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
                     {renderModuleDetail()}
                 </div>
-                {/* 底部退出小屋按钮 */}
                 <div className="pt-4 pb-6">
                     <button onClick={()=>{if(confirm("确定要退出小屋吗？")) leaveCabin();}} className="w-full text-center text-xs text-red-400 font-bold opacity-60 hover:opacity-100 transition-opacity py-3 bg-red-50/50 rounded-xl">退出当前小屋</button>
                 </div>
@@ -2393,12 +2407,9 @@ const CabinApp = ({
         );
     }
 
-
-    // 渲染模块概览桌面 (Dashboard)
     return (
         <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
             
-            {/* 顶部标题区 - 保持不变 */}
             <div className="shrink-0 space-y-3 mb-4">
                 <div className="bg-[#FF9F43] rounded-[28px] text-white p-5 shadow-xl relative overflow-hidden">
                     <div className="relative z-10 flex justify-between items-start">
@@ -2417,7 +2428,6 @@ const CabinApp = ({
                 </div>
             </div>
 
-            {/* 成员状态 & 状态切换面板 - 保持不变 */}
             <div className="bg-white/60 p-2 rounded-xl backdrop-blur-sm shadow-sm flex items-center gap-2 overflow-x-auto no-scrollbar relative mb-4 shrink-0">
                 <span className="text-xs font-black text-gray-500 shrink-0 ml-1">在线：</span>
                 {members.map(m => (
@@ -2433,7 +2443,6 @@ const CabinApp = ({
                     </div>
                 ))}
                 
-                {/* 状态切换气泡 */}
                 {showStatusMenu && (
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full mb-2 bg-white rounded-xl shadow-xl p-2 z-50 flex flex-wrap gap-2 animate-pop border-4 border-[#3DAA86] after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-0 after:border-l-[10px] after:border-r-[10px] after:border-t-[10px] after:border-t-[#3DAA86] after:border-l-transparent after:border-r-transparent">
                         <div className='absolute inset-1 rounded-lg border-2 border-dashed border-gray-200 pointer-events-none'></div>
@@ -2446,10 +2455,8 @@ const CabinApp = ({
                 )}
             </div>
 
-            {/* --- 模块化桌面 (核心内容) --- */}
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
                 
-                {/* 1. 核心数据概览 (周报摘要) */}
                 <div className="nook-card border-l-8 border-[#805AD5] p-4">
                     <div className='flex justify-between items-center mb-2'>
                         <h4 className='text-xs font-black text-gray-400'>岛务周报摘要</h4>
@@ -2462,7 +2469,6 @@ const CabinApp = ({
                     </div>
                 </div>
 
-                {/* 2. 模块抽屉 (Widget Grid) */}
                 <h4 className='text-xs font-black text-gray-500 ml-2 mt-4'>功能模块</h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {MODULE_LIST.filter(m => m.id !== 'report').map(item => (
@@ -2479,7 +2485,6 @@ const CabinApp = ({
                     ))}
                 </div>
 
-                {/* 3. 退出小屋 */}
                 <div className="pt-4 pb-6">
                     <button onClick={()=>{if(confirm("确定要退出小屋吗？")) leaveCabin();}} className="w-full text-center text-xs text-red-400 font-bold opacity-60 hover:opacity-100 transition-opacity py-3 bg-red-50/50 rounded-xl">退出当前小屋</button>
                 </div>
@@ -2515,6 +2520,7 @@ const App = () => {
     const [wikiItems, setWikiItems] = useState([]);
     const [passport, setPassport] = useState(null);
     const [shoppingItems, setShoppingItems] = useState([]);
+	const [ideas, setIdeas] = useState([]);
     const [decisionOptions, setDecisionOptions] = useState([]);
     
     const [messages, setMessages] = useState([]);
@@ -2582,23 +2588,31 @@ const App = () => {
 
             // --- 列表查询 ---
             const getList = async (className) => {
-                try {
-                    const qUser = new AV.Query(className).equalTo('user', currentUser);
-                    let finalQuery = qUser;
-                    if (cabinPointer) {
-                        const qCabin = new AV.Query(className).equalTo('cabin', cabinPointer);
-                        finalQuery = AV.Query.or(qUser, qCabin);
-                    }
-                    return await finalQuery.limit(100).descending('createdAt').find();
-                } catch (e) { return []; }
-            };
-
-            const [tasksObjs, ledgerObjs] = await Promise.all([ getList('NookTask'), getList('NookLedger') ]);
-            await new Promise(r => setTimeout(r, 100));
-            const [fitLogsObjs, voiceObjs, wikiObjs, shoppingObjs, decisionObjs] = await Promise.all([ getList('NookFitLog'), getList('NookVoiceWork'), getList('NookWiki'), getList('NookShoppingItem'), getList('NookDecisionOption') ]);
+                            try {
+                                const qUser = new AV.Query(className).equalTo('user', currentUser);
+                                let finalQuery = qUser;
+                                if (cabinPointer) {
+                                    const qCabin = new AV.Query(className).equalTo('cabin', cabinPointer);
+                                    finalQuery = AV.Query.or(qUser, qCabin);
+                                }
+                                return await finalQuery.limit(100).descending('createdAt').find();
+                            } catch (e) { return []; }
+                        };
             
-            // --- 独立拉取新表 (容错) ---
-            // 在 fetchData 中，确保所有局部变量都被正确初始化
+                        const [tasksObjs, ledgerObjs] = await Promise.all([ getList('NookTask'), getList('NookLedger') ]);
+                        await new Promise(r => setTimeout(r, 100));
+                        
+                        // ↓↓↓↓↓ 重点修改在这里 ↓↓↓↓↓
+                        // 确保左边的中括号里包含 ideaObjs，并且顺序与右边一致
+                        const [fitLogsObjs, voiceObjs, wikiObjs, shoppingObjs, decisionObjs, ideaObjs] = await Promise.all([ 
+                            getList('NookFitLog'), 
+                            getList('NookVoiceWork'), 
+                            getList('NookWiki'), 
+                            getList('NookShoppingItem'), 
+                            getList('NookDecisionOption'),
+                            getList('NookIdea') // 这一行获取的数据赋值给上面的 ideaObjs
+                        ]);
+         
             // --- 独立拉取新表 (容错) ---
             let msgObjs = [], projObjs = [], invObjs = [], starJarObjs = []; // <-- 【修正】确保 starJarObjs 被声明
             if (cabinPointer) {
@@ -2629,6 +2643,7 @@ const App = () => {
             setVoiceWorks(voiceObjs.map(simplify));
             setWikiItems(wikiObjs.map(simplifyWithExtra));
             setShoppingItems(shoppingObjs.map(simplifyWithExtra));
+			setIdeas(ideaObjs.map(simplifyWithExtra));
             setDecisionOptions(decisionObjs.map(simplify));
             
             setMessages(msgObjs.map(m => ({ ...simplify(m), cabinId: m.get('cabin')?.id, author: m.get('authorName') })));
@@ -2718,7 +2733,78 @@ const App = () => {
         }
     };
 	// ... (cabinActions 结束)
+	// ==========================================
+	    // App 内部的 Actions 更新
+	    // ==========================================
 	
+	    const ideaActions = {
+	        // [修改] 移除了 cabinId 参数，始终为私人
+	        addIdea: async (content) => {
+	            const Idea = AV.Object.extend('NookIdea');
+	            const i = new Idea();
+	            i.set('user', localUser);
+	            i.set('content', content);
+	            i.set('date', new Date().toLocaleDateString());
+	            i.set('timestamp', Date.now());
+	            // 不再设置 cabin 字段
+	
+	            const tempId = 'temp_' + Date.now();
+	            const optim = { 
+	                id: tempId, 
+	                content, 
+	                date: new Date().toLocaleDateString(), 
+	                timestamp: Date.now()
+	            };
+	            setIdeas(prev => [optim, ...prev]);
+	
+	            try {
+	                const saved = await i.save();
+	                setIdeas(prev => prev.map(x => x.id === tempId ? simplify(saved) : x));
+	            } catch (e) {
+	                setIdeas(prev => prev.filter(x => x.id !== tempId));
+	                showFeedback("保存失败", "error");
+	            }
+	        },
+	        deleteIdea: async (id) => {
+	            setIdeas(prev => prev.filter(x => x.id !== id));
+	            try {
+	                const obj = AV.Object.createWithoutData('NookIdea', id);
+	                await obj.destroy();
+	            } catch (e) {}
+	        }
+	    };
+	
+	    const decisionActions = { 
+	        // [修改] 增加了 groupName 参数
+	        addOption: async (name, groupName = '默认') => { 
+	            const Option = AV.Object.extend('NookDecisionOption'); 
+	            const o = new Option(); 
+	            o.set('user', localUser); 
+	            o.set('name', name); 
+	            o.set('group', groupName); // 保存分组信息
+	
+	            const tempId = 'temp_' + Date.now(); 
+	            const optim = { id: tempId, name, group: groupName }; 
+	            
+	            setDecisionOptions(prev => [optim, ...prev]); 
+	            
+	            try { 
+	                const saved = await o.save(); 
+	                setDecisionOptions(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); 
+	            } catch(e) {
+	                // 错误回滚
+	                setDecisionOptions(prev => prev.filter(x => x.id !== tempId));
+	                showFeedback("添加失败", "error");
+	            } 
+	        }, 
+	        deleteOption: async (id) => { 
+	            setDecisionOptions(prev => prev.filter(x => x.id !== id)); 
+	            try { 
+	                const obj = AV.Object.createWithoutData('NookDecisionOption', id); 
+	                await obj.destroy(); 
+	            } catch(e) {} 
+	        } 
+	    };
 	// ↓↓↓ 【新增】星星瓶动作 ↓↓↓
 	const starJarActions = {
 	    // 增加星星：A 想 B 了
@@ -3000,219 +3086,99 @@ const App = () => {
 // ==========================================
 // App 组件 - 记账动作 (ledgerActions) 最终修正版
 // ==========================================
-const ledgerActions = {
-    // 1. [addRecord 保持不变]
-    addRecord: async (type, amount, cat, note, isPending = false) => { 
-        const Ledger = AV.Object.extend('NookLedger'); 
-        const l = new Ledger(); 
-        const numericAmount = Number(amount);
-        
-        if (isNaN(numericAmount) || numericAmount <= 0) {
-            showFeedback("请输入有效的金额", "error");
-            return;
-        }
-
-        l.set('user', localUser); 
-        l.set('type', type); 
-        l.set('amount', numericAmount); 
-        l.set('category', cat); 
-        l.set('note', note); 
-        l.set('date', new Date().toLocaleDateString()); 
-        l.set('timestamp', Date.now()); 
-        
-        if (type === 'income') {
-            l.set('isPending', isPending);
-            if (isPending) {
-                 l.set('isSalary', true);
-            } else {
-                 l.set('isSalary', false);
+// ==========================================
+    // App 组件 - 记账动作 (ledgerActions) - 无预结算简化版
+    // ==========================================
+    const ledgerActions = {
+        // 1. [简化] 新增记录：不再有 isPending 参数，直接入账
+        addRecord: async (type, amount, cat, note) => { 
+            const Ledger = AV.Object.extend('NookLedger'); 
+            const l = new Ledger(); 
+            const numericAmount = Number(amount);
+            
+            if (isNaN(numericAmount) || numericAmount <= 0) {
+                showFeedback("请输入有效的金额", "error");
+                return;
             }
-        } else {
-            l.set('isPending', false);
-        }
 
-        const tempId = 'temp_' + Date.now(); 
-        const optim = { 
-            id: tempId, 
-            type, 
-            amount: numericAmount, 
-            category: cat, 
-            note, 
-            date: new Date().toLocaleDateString(), 
-            timestamp: Date.now(),
-            isPending: isPending,
-            isSalary: (type === 'income' && isPending)
-        }; 
-        setLedger(prev => [optim, ...prev]); 
-        
-        let statsUpdateNeeded = false;
-        let changeAmount = 0;
-        if (!isPending) {
-            statsUpdateNeeded = true;
-            changeAmount = (type === 'income' ? numericAmount : -numericAmount);
+            // 设置数据
+            l.set('user', localUser); 
+            l.set('type', type); 
+            l.set('amount', numericAmount); 
+            l.set('category', cat); 
+            l.set('note', note); 
+            l.set('date', new Date().toLocaleDateString()); 
+            l.set('timestamp', Date.now()); 
+            // 移除 isPending 和 isSalary 字段设置
+
+            // 乐观更新 UI (Ledger列表)
+            const tempId = 'temp_' + Date.now(); 
+            const optim = { 
+                id: tempId, 
+                type, 
+                amount: numericAmount, 
+                category: cat, 
+                note, 
+                date: new Date().toLocaleDateString(), 
+                timestamp: Date.now()
+            }; 
+            setLedger(prev => [optim, ...prev]); 
+            
+            // 实时更新资产 (Stats)
+            let changeAmount = (type === 'income' ? numericAmount : -numericAmount);
             setStats(prev => ({ ...prev, pocket: prev.pocket + changeAmount }));
-        }
 
-        try { 
-            const saved = await l.save(); 
-            if (statsUpdateNeeded) {
+            try { 
+                // 同时保存账单和更新资产
                 const sObj = AV.Object.createWithoutData('NookStats', stats.id);
                 sObj.increment('pocket', changeAmount);
-                await sObj.save();
+                
+                // 批量保存
+                await AV.Object.saveAll([l, sObj]);
+                
+                // 更新 ID
+                setLedger(prev => prev.map(x => x.id === tempId ? simplify(l) : x)); 
+            } catch(e) {
+                console.error("记账失败:", e);
+                // 失败回滚资产和列表
+                setStats(prev => ({ ...prev, pocket: prev.pocket - changeAmount }));
+                setLedger(prev => prev.filter(x => x.id !== tempId));
+                showFeedback("记账失败，请检查网络", "error");
             }
+        }, 
+        
+        // 2. [简化] 删除记录：所有记录删除都会回滚金额
+        deleteRecord: async (id) => { 
+            const recordToDelete = ledger.find(r => r.id === id);
+            if (!recordToDelete || recordToDelete.id.startsWith('temp_')) return;
             
-            setLedger(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); 
-        } catch(e) {
-            console.error("记账失败:", e);
-            if (statsUpdateNeeded) {
-                 setStats(prev => ({ ...prev, pocket: prev.pocket - changeAmount }));
+            const amount = recordToDelete.amount;
+            // 如果删的是支出，就要把钱加回来；删的是收入，要把钱扣掉
+            const reverseAmount = recordToDelete.type === 'expense' ? amount : -amount;
+            
+            // UI 移除
+            setLedger(prev => prev.filter(x => x.id !== id));
+
+            // UI 回滚资产
+            setStats(prev => ({ ...prev, pocket: prev.pocket + reverseAmount }));
+            
+            try { 
+                const sObj = AV.Object.createWithoutData('NookStats', stats.id);
+                sObj.increment('pocket', reverseAmount);
+                const lObj = AV.Object.createWithoutData('NookLedger', id); 
+
+                await AV.Object.saveAll([sObj, lObj.destroy()]);
+                showFeedback("账单已删除并还原金额");
+
+            } catch(e) {
+                console.error("删除记录失败", e);
+                showFeedback("删除失败，请手动检查账单", "error");
+                // 简单回滚 stats 防止数值错误显示
+                setStats(prev => ({ ...prev, pocket: stats.pocket }));
             }
-            setLedger(prev => prev.filter(x => x.id !== tempId));
         }
-    }, 
-    
-    // 2. [deleteRecord 保持不变]
-    deleteRecord: async (id) => { 
-        const recordToDelete = ledger.find(r => r.id === id);
-        if (!recordToDelete || recordToDelete.id.startsWith('temp_')) return;
-        
-        if (recordToDelete.isPending || recordToDelete.isSalary) {
-             setLedger(prev => prev.filter(x => x.id !== id));
-             try { 
-                const obj = AV.Object.createWithoutData('NookLedger', id); 
-                await obj.destroy(); 
-                showFeedback("账单已删除");
-             } catch(e) {
-                showFeedback("删除失败", "error");
-             }
-             return;
-        }
-
-        const amount = recordToDelete.amount;
-        const reverseAmount = recordToDelete.type === 'expense' ? amount : -amount;
-        
-        setLedger(prev => prev.filter(x => x.id !== id));
-
-        const newPocket = stats.pocket + reverseAmount;
-        setStats(prev => ({ ...prev, pocket: newPocket }));
-        
-        try { 
-            const sObj = AV.Object.createWithoutData('NookStats', stats.id);
-            sObj.increment('pocket', reverseAmount);
-            const lObj = AV.Object.createWithoutData('NookLedger', id); 
-
-            await AV.Object.saveAll([sObj, lObj.destroy()]);
-            
-            showFeedback("账单已删除并还原金额");
-
-        } catch(e) {
-            console.error("删除记录失败并回滚本地状态", e);
-            showFeedback("删除失败，请手动检查账单和金额", "error");
-            setStats(prev => ({ ...prev, pocket: stats.pocket }));
-        }
-    },
-    
-    // 3. [修正] 月度工资结算入账 (修复 tempId 作用域和回滚逻辑)
-    settleMonthlySalary: async (finalSettlementAmount, recordsToClear) => {
-        
-        // 确保 tempActualIncomeId 在 try 块外部定义，用于回滚
-        let tempActualIncomeId = null; 
-        
-        if (finalSettlementAmount < 0 || isNaN(finalSettlementAmount)) { 
-            showFeedback("结算金额不能为负数或无效值", "error");
-            return;
-        }
-        if (recordsToClear.length === 0) {
-            showFeedback("没有记录被选中，无需结算。", "error");
-            return;
-        }
-        
-        // 1. 准备要删除的记录 ID 列表
-        const clearedIds = recordsToClear.map(r => r.id);
-        
-        // 2. 乐观更新 Ledger 状态 (本地)：移除所有待删除的记录
-        setLedger(prev => {
-            return [
-                ...prev.filter(r => !clearedIds.includes(r.id)) // 过滤掉所有已清零的旧记录
-            ];
-        });
-        
-        // 3. 更新 stats (仅当金额大于 0 时才更新)
-        const statsUpdateNeeded = finalSettlementAmount > 0;
-        let sObj, actualIncome;
-
-        if (statsUpdateNeeded) {
-            const newPocket = stats.pocket + finalSettlementAmount;
-            setStats(prev => ({...prev, pocket: newPocket}));
-
-            sObj = AV.Object.createWithoutData('NookStats', stats.id);
-            sObj.increment('pocket', finalSettlementAmount);
-
-            // 准备创建实际入账记录
-            const Ledger = AV.Object.extend('NookLedger'); 
-            actualIncome = new Ledger();
-            actualIncome.set('user', localUser);
-            actualIncome.set('type', 'income');
-            actualIncome.set('amount', finalSettlementAmount);
-            actualIncome.set('category', '月结工资');
-            actualIncome.set('note', '工资入账');
-            actualIncome.set('date', new Date().toLocaleDateString());
-            actualIncome.set('timestamp', Date.now()); 
-            actualIncome.set('isPending', false);
-            actualIncome.set('isSalary', false);
-            
-            // 乐观更新 Ledger (添加新入账记录)
-            tempActualIncomeId = generateId(); // 【修正】在外部变量中赋值
-            const optimActualIncome = { ...simplify(actualIncome), id: tempActualIncomeId };
-            setLedger(prev => [optimActualIncome, ...prev]); 
-        }
-
-        try {
-            // 4. LeanCloud 执行删除和保存操作
-            
-            // A. 执行删除操作 (删除旧的预计收入记录)
-            const ledgerObjectsToDelete = recordsToClear.map(r => AV.Object.createWithoutData('NookLedger', r.id));
-            await AV.Object.destroyAll(ledgerObjectsToDelete);
-            
-            // B. 执行保存操作 (用户状态和新入账记录)
-            const objectsToSave = [];
-            if (statsUpdateNeeded) {
-                objectsToSave.push(sObj);
-                objectsToSave.push(actualIncome);
-            }
-            
-            let savedIncome = null;
-            if (objectsToSave.length > 0) {
-                const results = await AV.Object.saveAll(objectsToSave);
-                savedIncome = results.find(obj => obj.className === 'NookLedger');
-            }
-
-            // C. 最终同步本地 UI (替换临时 ID)
-            if (statsUpdateNeeded && savedIncome) {
-                 setLedger(prev => prev.map(r => 
-                    r.id === tempActualIncomeId ? simplify(savedIncome) : r
-                ));
-            }
-
-            const msg = statsUpdateNeeded 
-                ? `月工资 ${finalSettlementAmount.toLocaleString()} 铃钱已入账！`
-                : `预计收入已清零 (${recordsToClear.length} 笔记录已删除)。`;
-
-            showFeedback(msg, "success");
-            
-        } catch (e) {
-            console.error("结算失败:", e);
-            showFeedback("结算失败，请重试。", "error");
-            
-            // 失败后回滚本地状态：
-            // 1. 如果有新创建的临时记录，移除它
-            if (tempActualIncomeId) {
-                setLedger(prev => prev.filter(r => r.id !== tempActualIncomeId)); 
-            }
-            // 2. 如果更新了 Stats，理论上需要回滚 stats 和 ledger，但这里只做最简单且安全的处理：回滚 Ledger 临时记录。
-        }
-    }
-};
+        // 3. [移除] settleMonthlySalary 已被完全移除
+    };
    const fitnessActions = { updateProfile: async (p) => { setFitProfile(p); try { const f = AV.Object.createWithoutData('NookFitProfile', fitProfile.id); f.set('height', p.height); f.set('weight', p.weight); f.set('age', p.age); f.set('gender', p.gender); await f.save(); } catch(e) {} }, addLog: async (type, val, note) => { const Log = AV.Object.extend('NookFitLog'); const l = new Log(); l.set('user', localUser); l.set('type', type); l.set('val', val); l.set('note', note); l.set('date', new Date().toLocaleDateString()); l.set('timestamp', Date.now()); l.set('time', new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})); const tempId = 'temp_'+Date.now(); const optim = { id: tempId, type, val, note, date: new Date().toLocaleDateString(), timestamp: Date.now(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }; setFitLogs(prev => [optim, ...prev]); try { const saved = await l.save(); setFitLogs(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {} } };
     // ... (在其他 actions 定义之后)
 const voiceWorkActions = { 
@@ -3267,8 +3233,7 @@ const voiceWorkActions = {
 };
 // ...
 	const financeActions = { updateStats: async (newStats) => { setStats(prev => ({...prev, ...newStats})); try { const s = AV.Object.createWithoutData('NookStats', stats.id); if(newStats.pocket!==undefined)s.set('pocket', newStats.pocket); if(newStats.savings!==undefined)s.set('savings', newStats.savings); if(newStats.loan!==undefined)s.set('loan', newStats.loan); await s.save(); } catch(e) {} } };
-    const decisionActions = { addOption: async (name) => { const Option = AV.Object.extend('NookDecisionOption'); const o = new Option(); o.set('user', localUser); o.set('name', name); const tempId = 'temp_' + Date.now(); const optim = { id: tempId, name }; setDecisionOptions(prev => [optim, ...prev]); try { const saved = await o.save(); setDecisionOptions(prev => prev.map(x => x.id === tempId ? simplify(saved) : x)); } catch(e) {} }, deleteOption: async (id) => { setDecisionOptions(prev => prev.filter(x => x.id !== id)); try { const obj = AV.Object.createWithoutData('NookDecisionOption', id); await obj.destroy(); } catch(e) {} } };
-    const passportActions = { updatePassport: async (newPassport) => { setPassport(newPassport); try { const p = AV.Object.createWithoutData('NookPassport', passport.id); p.set('title1', newPassport.title1); p.set('title2', newPassport.title2); p.set('islandName', newPassport.islandName); p.set('fruit', newPassport.fruit); p.set('birthday', newPassport.birthday); p.set('comment', newPassport.comment); await p.save(); showFeedback("护照信息已更新！"); } catch(e) {} } };
+const passportActions = { updatePassport: async (newPassport) => { setPassport(newPassport); try { const p = AV.Object.createWithoutData('NookPassport', passport.id); p.set('title1', newPassport.title1); p.set('title2', newPassport.title2); p.set('islandName', newPassport.islandName); p.set('fruit', newPassport.fruit); p.set('birthday', newPassport.birthday); p.set('comment', newPassport.comment); await p.save(); showFeedback("护照信息已更新！"); } catch(e) {} } };
 
     if (!isAuthReady) return <div className="w-full h-full flex flex-col items-center justify-center bg-[#7FE2C3] animate-pop"><div className="w-24 h-24 bg-white rounded-[30px] flex items-center justify-center shadow-lg animate-bounce"><Icon path={Icons.Leaf} size={60} color="#3DAA86"/></div></div>;
     if (resetStep > 0) return (<div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-pop"><div className="nook-card w-full max-w-xs text-center border-4 border-red-500 shadow-2xl"><h2 className="text-xl font-black text-[#59584D] mb-2">{resetStep === 1 ? "确定要退出吗？" : "最后警告！"}</h2><p className="text-sm text-gray-500 font-bold mb-6">退出后下次需要重新登录。</p><div className="space-y-3"><button onClick={() => resetStep === 1 ? setResetStep(2) : handleReset()} className="nook-btn w-full bg-red-500">{resetStep === 1 ? "确定退出" : "确认"}</button><button onClick={() => setResetStep(0)} className="nook-btn-secondary w-full">取消</button></div></div></div>);
@@ -3293,6 +3258,7 @@ const voiceWorkActions = {
                         <AppIcon icon={Icons.ShoppingBag} label="Nook购物" onClick={()=>setCurrentApp('shopping')}/>
                         <AppIcon icon={Icons.CreditCard} label="ABD" onClick={()=>setCurrentApp('finance')}/>
                         <AppIcon icon={Icons.Mic} label="Nook录音" onClick={()=>setCurrentApp('voice')}/> 
+						<AppIcon icon={Icons.Lightbulb} label="Nook idea" onClick={()=>setCurrentApp('idea')}/>
                         <AppIcon icon={Icons.Bookmark} label="Nook小知识" onClick={()=>setCurrentApp('wiki')}/> 
                         <AppIcon icon={Icons.Dice} label="Nook Decision" onClick={()=>setCurrentApp('decision')}/>
                         <AppIcon icon={Icons.Radio} label="每日播报" onClick={()=>setCurrentApp('daily')}/> 
@@ -3328,7 +3294,9 @@ const voiceWorkActions = {
                             {currentApp === 'fitness' && <FitnessApp profile={fitProfile} logs={fitLogs} user={userDoc.username} showFeedback={showFeedback} {...fitnessActions}/>}
                             {currentApp === 'voice' && <VoiceWorkApp voiceWorks={voiceWorks} showFeedback={showFeedback} {...voiceWorkActions}/>} 
                             {currentApp === 'wiki' && <WikiApp items={wikiItems} showFeedback={showFeedback} cabin={cabin} {...wikiActionsFull}/>} 
-                            {currentApp === 'finance' && <FinanceApp stats={stats} showFeedback={showFeedback} setCurrentApp={setCurrentApp} {...financeActions}/>}
+                            {/* 确认传参正确 */}
+                            {currentApp === 'idea' && <IdeaApp ideas={ideas} showFeedback={showFeedback} {...ideaActions}/>}
+							{currentApp === 'finance' && <FinanceApp stats={stats} showFeedback={showFeedback} setCurrentApp={setCurrentApp} {...financeActions}/>}
 							{currentApp === 'history' && <FinanceHistoryApp ledger={ledger} stats={stats} setCurrentApp={setCurrentApp} showFeedback={showFeedback}/>}
 							{currentApp === 'passport' && <PassportApp user={userDoc} stats={stats} passport={passport} {...passportActions}/>}
                             {currentApp === 'shopping' && <ShoppingApp items={shoppingItems} showFeedback={showFeedback} cabin={cabin} memberCount={memberCount} {...shoppingActions}/>}
