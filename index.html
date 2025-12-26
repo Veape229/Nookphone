@@ -2013,684 +2013,211 @@ const FinanceHistoryApp = ({ ledger, stats, setCurrentApp, showFeedback }) => {
 // CabinApp 组件 (修复版：支持查看共享知识详情)
 // ==========================================
 const CabinApp = ({ 
-    user, cabin, tasks, shoppingItems, wikiItems, messages, projects, inventory, 
-    starJar, 
-    createCabin, joinCabin, leaveCabin, addMessage, createProject, 
-    donateProject, 
-    addInventory, updateInventory, deleteInventory, 
-    updateStatus, addStar, clearStars, 
-    showFeedback, memberCount, stats 
-}) => {
-    // 状态定义
-    const [view, setView] = useState(cabin ? 'dashboard' : 'welcome'); 
-    const [activeModule, setActiveModule] = useState(null); 
-    const [inputName, setInputName] = useState('');
-    const [inputCode, setInputCode] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [members, setMembers] = useState([]);
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    
-    // [新增] 用于小屋内查看 Wiki 详情的状态
-    const [selectedWiki, setSelectedWiki] = useState(null);
+            user, cabin, tasks, shoppingItems, wikiItems, messages, projects, inventory, 
+            starJar, comments, // 接收评论数据
+            createCabin, joinCabin, leaveCabin, addMessage, addComment, // 接收评论方法
+            createProject, donateProject, 
+            addInventory, updateInventory, deleteInventory, 
+            updateStatus, addStar, clearStars, 
+            showFeedback, memberCount, stats 
+        }) => {
+            const [view, setView] = useState(cabin ? 'dashboard' : 'welcome'); 
+            const [activeModule, setActiveModule] = useState(null); 
+            const [inputName, setInputName] = useState('');
+            const [inputCode, setInputCode] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [members, setMembers] = useState([]);
+            const [isRefreshing, setIsRefreshing] = useState(false);
+            const [selectedWiki, setSelectedWiki] = useState(null);
 
-    // 模块内部状态
-    const [msgContent, setMsgContent] = useState('');
-    const [projName, setProjName] = useState('');
-    const [projGoal, setProjGoal] = useState('');
-    const [donateVal, setDonateVal] = useState('');
-    const [donateSource, setDonateSource] = useState('pocket');
-    const [invName, setInvName] = useState('');
-    const [invQty, setInvQty] = useState('1');
-    const [invDate, setInvDate] = useState(new Date().toISOString().split('T')[0]); 
-    const [showStatusMenu, setShowStatusMenu] = useState(false);
-    const [recipientId, setRecipientId] = useState(null); 
+            // 模块内部状态
+            const [msgContent, setMsgContent] = useState('');
+            const [replyTo, setReplyTo] = useState(null); // 回复状态
+            const [replyContent, setReplyContent] = useState(''); // 回复内容
 
-    // 数据过滤 
-    const sharedTasks = tasks.filter(t => t.cabinId === cabin?.id);
-    const sharedShopping = shoppingItems.filter(i => i.cabinId === cabin?.id);
-    const sharedWiki = wikiItems.filter(i => i.cabinId === cabin?.id);
-    const sharedMessages = messages ? messages.filter(m => m.cabinId === cabin?.id) : [];
-    const sharedProjects = projects ? projects.filter(p => p.cabinId === cabin?.id) : [];
-    const sharedInventory = inventory ? inventory.filter(i => i.cabinId === cabin?.id).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)) : [];
+            const [projName, setProjName] = useState('');
+            const [projGoal, setProjGoal] = useState('');
+            const [donateVal, setDonateVal] = useState('');
+            const [donateSource, setDonateSource] = useState('pocket');
+            const [invName, setInvName] = useState('');
+            const [invQty, setInvQty] = useState('1');
+            const [invDate, setInvDate] = useState(new Date().toISOString().split('T')[0]); 
+            const [showStatusMenu, setShowStatusMenu] = useState(false);
+            const [recipientId, setRecipientId] = useState(null); 
 
-    const STATUS_OPTIONS = [{ id: 'online', label: '在线', icon: '🟢' },{ id: 'busy', label: '忙碌', icon: '🔴' },{ id: 'sleep', label: '睡觉', icon: '😴' },{ id: 'game', label: '肝动森', icon: '🎮' },{ id: 'work', label: '搬砖', icon: '💻' },{ id: 'food', label: '干饭', icon: '🍜' },{ id: 'fish', label: '摸鱼', icon: '🐟' }];
+            // 数据过滤 
+            const sharedTasks = tasks.filter(t => t.cabinId === cabin?.id);
+            const sharedShopping = shoppingItems.filter(i => i.cabinId === cabin?.id);
+            const sharedWiki = wikiItems.filter(i => i.cabinId === cabin?.id);
+            const sharedMessages = messages ? messages.filter(m => m.cabinId === cabin?.id) : [];
+            const sharedProjects = projects ? projects.filter(p => p.cabinId === cabin?.id) : [];
+            const sharedInventory = inventory ? inventory.filter(i => i.cabinId === cabin?.id).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)) : [];
+            const sharedComments = comments ? comments.filter(c => c.cabinId === cabin?.id) : []; // 过滤评论
 
-    // [新增] 切换模块时重置选中的 Wiki
-    useEffect(() => { setSelectedWiki(null); }, [activeModule]);
+            const STATUS_OPTIONS = [{ id: 'online', label: '在线', icon: '🟢' },{ id: 'busy', label: '忙碌', icon: '🔴' },{ id: 'sleep', label: '睡觉', icon: '😴' },{ id: 'game', label: '肝动森', icon: '🎮' },{ id: 'work', label: '搬砖', icon: '💻' },{ id: 'food', label: '干饭', icon: '🍜' },{ id: 'fish', label: '摸鱼', icon: '🐟' }];
 
-    // --- 星星瓶计算逻辑 ---
-    const myReceivedStars = useMemo(() => {
-        return starJar.filter(s => s.recipientId === user.id);
-    }, [starJar, user.id]); 
+            useEffect(() => { setSelectedWiki(null); }, [activeModule]);
 
-    const mySentStars = useMemo(() => {
-        return starJar.filter(s => s.senderId === user.id);
-    }, [starJar, user.id]); 
+            const myReceivedStars = useMemo(() => starJar.filter(s => s.recipientId === user.id), [starJar, user.id]); 
+            const mySentStars = useMemo(() => starJar.filter(s => s.senderId === user.id), [starJar, user.id]); 
 
-    // 周报数据计算
-    const weeklyReport = useMemo(() => {
-        if (!cabin) return null;
-        const now = new Date();
-        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        
-        const recentTasks = sharedTasks.filter(t => t.completed && new Date(t.updatedAt || t.createdAt) > oneWeekAgo);
-        const totalCompleted = recentTasks.length;
+            const weeklyReport = useMemo(() => {
+                if (!cabin) return null;
+                const now = new Date();
+                const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                const recentTasks = sharedTasks.filter(t => t.completed && new Date(t.updatedAt || t.createdAt) > oneWeekAgo);
+                const totalCompleted = recentTasks.length;
+                const recentShopping = sharedShopping.filter(i => i.checked && new Date(i.updatedAt || i.createdAt) > oneWeekAgo);
+                const totalSpent = recentShopping.reduce((sum, i) => sum + (i.price || 0), 0);
+                const userScores = {};
+                recentTasks.forEach(t => { (t.completedBy || []).forEach(uid => { userScores[uid] = (userScores[uid] || 0) + 1; }); });
+                let mvpId = null; let maxScore = -1;
+                Object.entries(userScores).forEach(([uid, score]) => { if (score > maxScore) { maxScore = score; mvpId = uid; } });
+                const mvpUser = members.find(m => m.id === mvpId);
+                const chartData = members.map(m => ({ name: m.username, avatar: m.avatar, score: userScores[m.id] || 0 }));
+                const chartMax = Math.max(...chartData.map(d => d.score), 1); 
+                return { totalCompleted, totalSpent, mvpUser, maxScore, chartData, chartMax };
+            }, [sharedTasks, sharedShopping, members, cabin]);
 
-        const recentShopping = sharedShopping.filter(i => i.checked && new Date(i.updatedAt || i.createdAt) > oneWeekAgo);
-        const totalSpent = recentShopping.reduce((sum, i) => sum + (i.price || 0), 0);
+            const fetchMembers = async () => {
+                if (!cabin) return;
+                setIsRefreshing(true);
+                try {
+                    const q = new AV.Query('_User');
+                    q.equalTo('cabin', AV.Object.createWithoutData('NookCabin', cabin.id));
+                    const users = await q.find();
+                    const mappedUsers = users.map(u => ({ id: u.id, username: u.getUsername(), avatar: u.get('avatar') || AVATAR_LIBRARY[0], status: u.get('status') || 'online' }));
+                    setMembers(mappedUsers.length > 0 ? mappedUsers : [{ ...user, status: 'online' }]);
+                } catch (e) { setMembers([{ ...user, status: 'online' }]); } 
+                finally { setIsRefreshing(false); }
+            };
 
-        const userScores = {};
-        recentTasks.forEach(t => {
-            (t.completedBy || []).forEach(uid => {
-                userScores[uid] = (userScores[uid] || 0) + 1;
-            });
-        });
-        
-        let mvpId = null;
-        let maxScore = -1;
-        Object.entries(userScores).forEach(([uid, score]) => {
-            if (score > maxScore) { maxScore = score; mvpId = uid; }
-        });
-        const mvpUser = members.find(m => m.id === mvpId);
+            useEffect(() => { fetchMembers(); }, [cabin]); 
+            useEffect(() => { if(cabin) setView('dashboard'); }, [cabin]);
+            useEffect(() => { if (members.length === 2 && !recipientId) { setRecipientId(members.find(m => m.id !== user.id)?.id || null); } }, [members, user.id, recipientId]);
 
-        const chartData = members.map(m => ({
-            name: m.username,
-            avatar: m.avatar,
-            score: userScores[m.id] || 0
-        }));
-        const chartMax = Math.max(...chartData.map(d => d.score), 1); 
+            const handleAddStar = () => { if (!recipientId || recipientId === user.id) return showFeedback("请先选择对象！", "error"); addStar(recipientId, cabin.id); showFeedback("星星已放入瓶子！✨", "success"); };
+            const handleCreate = async () => { if(!inputName) return; setIsLoading(true); await createCabin(inputName); setIsLoading(false); };
+            const handleJoin = async () => { if(!inputCode) return; setIsLoading(true); await joinCabin(inputCode); setIsLoading(false); };
+            const handlePostMsg = () => { if(!msgContent.trim()) return; addMessage(msgContent, cabin.id); setMsgContent(''); showFeedback("留言已张贴"); };
+            const handleCreateProj = () => { if(!projName || !projGoal) return; createProject(projName, Number(projGoal), cabin.id); setProjName(''); setProjGoal(''); showFeedback("募捐计划已设立"); };
+            const handleDonate = (pid) => { if(!donateVal || Number(donateVal) <= 0) return alert("请输入有效金额"); if ((donateSource==='pocket' ? stats.pocket : stats.savings) < Number(donateVal)) return alert("余额不足！"); donateProject(pid, Number(donateVal), donateSource); setDonateVal(''); showFeedback("捐赠成功！"); };
+            const handleChangeStatus = async (s) => { await updateStatus(s.id); setShowStatusMenu(false); setMembers(prev => prev.map(m => m.id === user.id ? { ...m, status: s.id } : m)); showFeedback(`状态更新为：${s.label}`); };
+            const handleAddInv = () => { if(!invName) return alert("请输入物品名称"); addInventory(invName, Number(invQty), invDate, cabin.id); setInvName(''); setInvQty('1'); setInvDate(new Date().toISOString().split('T')[0]); showFeedback("已存入收纳"); };
+            const handleQty = (item, delta) => { const newQ = item.quantity + delta; if(newQ <= 0) { if(confirm("用完了吗？要删除吗？")) deleteInventory(item.id); } else updateInventory(item.id, newQ); };
+            const getStoredDays = (d) => { if(!d) return 0; const today = new Date().setHours(0,0,0,0); const stored = new Date(d).setHours(0,0,0,0); const diff = today - stored; if (diff < 0) return 0; return Math.floor(diff / (86400000)); };
+            const getStatusIcon = (sid) => STATUS_OPTIONS.find(s => s.id === sid)?.icon || '🟢';
 
-        return { totalCompleted, totalSpent, mvpUser, maxScore, chartData, chartMax };
-    }, [sharedTasks, sharedShopping, members, cabin]);
+            if (!cabin) return (<div className="flex flex-col flex-1 min-h-0 screen-enter h-full items-center justify-center p-6 pb-20"><div className="w-20 h-20 bg-[#FF9F43] rounded-full flex items-center justify-center text-white shadow-lg mb-4 animate-bounce"><Icon path={Icons.Home} size={40}/></div><h2 className="text-2xl font-black text-[#59584D] mb-2">Nook 小屋</h2><p className="text-sm text-gray-500 font-bold mb-8 text-center">你的线上共享岛屿</p><div className="w-full max-w-xs space-y-6"><div className="nook-card animate-pop"><h3 className="font-bold text-[#59584D] mb-2 text-center">创建新小屋</h3><input value={inputName} onChange={e=>setInputName(e.target.value)} className="nook-input mb-3 text-center" placeholder="给小屋起个名字"/><button onClick={handleCreate} disabled={isLoading} className="nook-btn w-full bg-[#FF9F43] shadow-[0_5px_0_#E67E22]">{isLoading?'...':'创建'}</button></div><div className="relative flex justify-center"><span className="bg-[#7FE2C3] px-2 text-white font-bold text-xs">OR</span></div><div className="nook-card animate-pop" style={{animationDelay:'100ms'}}><h3 className="font-bold text-[#59584D] mb-2 text-center">加入小屋</h3><input value={inputCode} onChange={e=>setInputCode(e.target.value)} className="nook-input mb-3 text-center" placeholder="输入邀请码"/><button onClick={handleJoin} disabled={isLoading} className="nook-btn-secondary w-full bg-white">{isLoading?'...':'加入'}</button></div></div></div>);
 
+            const MODULE_LIST = [
+                {id:'tasks',l:'共享任务',i:Icons.Leaf,c:'#3DAA86', count: sharedTasks.filter(t => !t.completed).length},
+                {id:'shopping',l:'购物清单',i:Icons.ShoppingBag,c:'#F6E05E', count: sharedShopping.filter(i => !i.checked).length},
+                {id:'starjar',l:'星星瓶',i:Icons.Star,c:'#FF9F43', count: myReceivedStars.reduce((sum, s) => sum + (s.stars || 0), 0)},
+                {id:'inventory',l:'收纳箱',i:Icons.Box,c:'#4299E1', count: sharedInventory.length},
+                {id:'funds',l:'募捐计划',i:Icons.Gift,c:'#E53E3E', count: sharedProjects.filter(p => p.current < p.goal).length},
+                {id:'board',l:'公告留言',i:Icons.Megaphone,c:'#F59E0B', count: sharedMessages.length},
+                {id:'wiki',l:'共享知识',i:Icons.Bookmark,c:'#667EEA', count: sharedWiki.length},
+                {id:'report',l:'岛务周报',i:Icons.Clipboard,c:'#805AD5', count: null},
+            ];
 
-    const fetchMembers = async () => {
-        if (!cabin) return;
-        setIsRefreshing(true);
-        try {
-            const q = new AV.Query('_User');
-            q.equalTo('cabin', AV.Object.createWithoutData('NookCabin', cabin.id));
-            const users = await q.find();
-            const mappedUsers = users.map(u => ({ id: u.id, username: u.getUsername(), avatar: u.get('avatar') || AVATAR_LIBRARY[0], status: u.get('status') || 'online' }));
-            setMembers(mappedUsers.length > 0 ? mappedUsers : [{ ...user, status: 'online' }]);
-        } catch (e) { setMembers([{ ...user, status: 'online' }]); } 
-        finally { setIsRefreshing(false); }
-    };
-
-    useEffect(() => { fetchMembers(); }, [cabin]); 
-    useEffect(() => { if(cabin) setView('dashboard'); }, [cabin]);
-    
-    // 自动设置情侣ID（如果小屋只有两人）
-    useEffect(() => {
-        if (members.length === 2 && !recipientId) {
-            setRecipientId(members.find(m => m.id !== user.id)?.id || null);
-        }
-    }, [members, user.id, recipientId]);
-
-
-    // --- Actions ---
-    const handleAddStar = () => {
-        if (!recipientId || recipientId === user.id) {
-            return showFeedback("请先选择发送星星的对象！", "error");
-        }
-        addStar(recipientId, cabin.id);
-        showFeedback("星星已放入瓶子！Ta能感受到你的思念！✨", "success");
-    };
-
-    const handleClearStars = (senderId, starCount) => {
-        if (starCount > 0) {
-            clearStars(user.id, senderId, cabin.id);
-        }
-    };
-    
-    const handleCreate = async () => { if(!inputName) return; setIsLoading(true); await createCabin(inputName); setIsLoading(false); };
-    const handleJoin = async () => { if(!inputCode) return; setIsLoading(true); await joinCabin(inputCode); setIsLoading(false); };
-    const handlePostMsg = () => { if(!msgContent.trim()) return; addMessage(msgContent, cabin.id); setMsgContent(''); showFeedback("留言已张贴"); };
-    const handleCreateProj = () => { if(!projName || !projGoal) return; createProject(projName, Number(projGoal), cabin.id); setProjName(''); setProjGoal(''); showFeedback("募捐计划已设立"); };
-    const handleDonate = (pid) => { 
-        if(!donateVal || Number(donateVal) <= 0) return alert("请输入有效金额"); 
-        if ((donateSource==='pocket' ? stats.pocket : stats.savings) < Number(donateVal)) return alert("余额不足！");
-        donateProject(pid, Number(donateVal), donateSource); setDonateVal(''); 
-        showFeedback("捐赠成功！");
-    };
-    const handleChangeStatus = async (s) => { await updateStatus(s.id); setShowStatusMenu(false); setMembers(prev => prev.map(m => m.id === user.id ? { ...m, status: s.id } : m)); showFeedback(`状态更新为：${s.label}`); };
-    
-    const handleAddInv = () => {
-        if(!invName) return alert("请输入物品名称");
-        addInventory(invName, Number(invQty), invDate, cabin.id);
-        setInvName(''); setInvQty('1'); setInvDate(new Date().toISOString().split('T')[0]); showFeedback("已存入收纳");
-    };
-    const handleQty = (item, delta) => {
-        const newQ = item.quantity + delta;
-        if(newQ <= 0) { if(confirm("用完了吗？要删除吗？")) deleteInventory(item.id); }
-        else updateInventory(item.id, newQ);
-    };
-    const getStoredDays = (d) => { 
-        if(!d) return 0; 
-        const today = new Date().setHours(0,0,0,0);
-        const stored = new Date(d).setHours(0,0,0,0);
-        const diff = today - stored;
-        if (diff < 0) return 0; 
-        return Math.floor(diff / (86400000)); 
-    };
-    const getStatusIcon = (sid) => STATUS_OPTIONS.find(s => s.id === sid)?.icon || '🟢';
-
-
-    // 欢迎界面
-    if (!cabin) return (<div className="flex flex-col flex-1 min-h-0 screen-enter h-full items-center justify-center p-6 pb-20"><div className="w-20 h-20 bg-[#FF9F43] rounded-full flex items-center justify-center text-white shadow-lg mb-4 animate-bounce"><Icon path={Icons.Home} size={40}/></div><h2 className="text-2xl font-black text-[#59584D] mb-2">Nook 小屋</h2><p className="text-sm text-gray-500 font-bold mb-8 text-center">你的线上共享岛屿</p><div className="w-full max-w-xs space-y-6"><div className="nook-card animate-pop"><h3 className="font-bold text-[#59584D] mb-2 text-center">创建新小屋</h3><input value={inputName} onChange={e=>setInputName(e.target.value)} className="nook-input mb-3 text-center" placeholder="给小屋起个名字"/><button onClick={handleCreate} disabled={isLoading} className="nook-btn w-full bg-[#FF9F43] shadow-[0_5px_0_#E67E22]">{isLoading?'...':'创建'}</button></div><div className="relative flex justify-center"><span className="bg-[#7FE2C3] px-2 text-white font-bold text-xs">OR</span></div><div className="nook-card animate-pop" style={{animationDelay:'100ms'}}><h3 className="font-bold text-[#59584D] mb-2 text-center">加入小屋</h3><input value={inputCode} onChange={e=>setInputCode(e.target.value)} className="nook-input mb-3 text-center" placeholder="输入邀请码"/><button onClick={handleJoin} disabled={isLoading} className="nook-btn-secondary w-full bg-white">{isLoading?'...':'加入'}</button></div></div></div>);
-
-    
-    const MODULE_LIST = [
-        {id:'tasks',l:'共享任务',i:Icons.Leaf,c:'#3DAA86', count: sharedTasks.filter(t => !t.completed).length},
-        {id:'shopping',l:'购物清单',i:Icons.ShoppingBag,c:'#F6E05E', count: sharedShopping.filter(i => !i.checked).length},
-        {id:'starjar',l:'星星瓶',i:Icons.Star,c:'#FF9F43', count: myReceivedStars.reduce((sum, s) => sum + (s.stars || 0), 0)},
-        {id:'inventory',l:'收纳箱',i:Icons.Box,c:'#4299E1', count: sharedInventory.length},
-        {id:'funds',l:'募捐计划',i:Icons.Gift,c:'#E53E3E', count: sharedProjects.filter(p => p.current < p.goal).length},
-        {id:'board',l:'公告留言',i:Icons.Megaphone,c:'#F59E0B', count: sharedMessages.length},
-        {id:'wiki',l:'共享知识',i:Icons.Bookmark,c:'#667EEA', count: sharedWiki.length},
-        {id:'report',l:'岛务周报',i:Icons.Clipboard,c:'#805AD5', count: null},
-    ];
-
-    // --- 渲染模块详细内容 ---
-    const renderModuleDetail = () => {
-        const DetailHeader = ({ title, icon, color }) => (
-            <div className="flex items-center justify-between mb-4 shrink-0">
-                <button 
-                    onClick={() => setActiveModule(null)} 
-                    className="p-2 -ml-2 rounded-full text-gray-500 transition-colors hover:bg-gray-200"
-                >
-                    <Icon path={Icons.ArrowLeft} size={24}/>
-                </button>
-                <div className="flex items-center gap-3 flex-1">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm`} style={{ backgroundColor: color }}><Icon path={icon} size={20}/></div>
-                    <h2 className="text-xl font-black opacity-80">{title}</h2>
-                </div>
-                <div className="w-8"></div>
-            </div>
-        );
-
-        switch (activeModule) {
-            case 'tasks':
-                return (
-                    <div className="flex flex-col flex-1 min-h-0 h-full">
-                        <DetailHeader title="共享任务" icon={Icons.Leaf} color="#3DAA86" />
-                        <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
-                            {sharedTasks.length === 0 && <CabinEmptyState icon="📝" text="小屋暂无共享任务" />}
-                            {sharedTasks.map((t, i) => (
-                                <div key={t.id} className="nook-card border-l-8 border-[#3DAA86] p-4 flex items-center justify-between animate-pop" style={{animationDelay: `${i*30}ms`}}>
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${t.completed ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>
-                                            <Icon path={Icons.Leaf} size={20} />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="font-bold text-[#59584D] text-sm truncate">{t.title}</div>
-                                            <div className="text-[10px] text-gray-400 font-bold mt-0.5">{t.completed ? '已全员完成' : '进行中'}</div>
-                                        </div>
-                                    </div>
-                                    <span className="text-xs font-black text-[#3DAA86] bg-[#E6FFFA] px-2 py-1 rounded-full shrink-0">({t.completedBy?.length||0}/{memberCount})</span>
-                                </div>
-                            ))}
-                        </div>
+            const renderModuleDetail = () => {
+                const DetailHeader = ({ title, icon, color }) => (
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                        <button onClick={() => setActiveModule(null)} className="p-2 -ml-2 rounded-full text-gray-500 transition-colors hover:bg-gray-200"><Icon path={Icons.ArrowLeft} size={24}/></button>
+                        <div className="flex items-center gap-3 flex-1"><div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm`} style={{ backgroundColor: color }}><Icon path={icon} size={20}/></div><h2 className="text-xl font-black opacity-80">{title}</h2></div><div className="w-8"></div>
                     </div>
                 );
-            case 'shopping':
-                return (
-                    <div className="flex flex-col flex-1 min-h-0 h-full">
-                        <DetailHeader title="购物清单" icon={Icons.ShoppingBag} color="#F6E05E" />
-                        <div className="space-y-3">
-                            {sharedShopping.length === 0 && <CabinEmptyState icon="🛒" text="购物清单是空的" />}
-                            {sharedShopping.map((i, idx) => (
-                                <div key={i.id} className={`nook-card border-l-8 border-[#F6E05E] p-4 flex items-center justify-between ${i.checked ? 'opacity-50 grayscale' : ''} animate-pop`} style={{animationDelay: `${idx*30}ms`}}>
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${i.checked ? 'bg-gray-200 text-gray-400' : 'bg-yellow-100 text-yellow-600'}`}>
-                                            <Icon path={Icons.ShoppingBag} size={20} />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className={`font-bold text-[#59584D] text-sm truncate ${i.checked ? 'line-through' : ''}`}>{i.name}</div>
-                                            <span className="text-[10px] font-black text-[#D69E2E] bg-[#FFFBEB] px-1.5 py-0.5 rounded mt-0.5 inline-block">({i.checkedBy?.length||0}/{memberCount})</span>
-                                        </div>
-                                    </div>
-                                    {i.price > 0 && <div className="text-xs font-black text-purple-600 bg-purple-100 px-2 py-1 rounded-full shrink-0">{i.price.toLocaleString()}</div>}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
-            case 'inventory':
-                return (
-                    <div className='space-y-3'>
-                        <DetailHeader title="收纳箱" icon={Icons.Box} color="#4299E1" />
-                        <div className="nook-card border-l-8 border-[#4299E1] p-4 flex flex-col gap-3 animate-pop">
-                            <h4 className='text-xs font-bold text-gray-400'>快速存入收纳箱</h4>
-                            <div className="flex gap-2 items-center">
-                                <input value={invName} onChange={e=>setInvName(e.target.value)} className="flex-[2] nook-input text-sm" placeholder="物品名称 (如: 鸡蛋)"/>
-                                <input type="number" value={invQty} onChange={e=>setInvQty(e.target.value)} className="w-12 nook-input text-sm text-center" placeholder="Qty"/>
-                            </div>
-                            <div className='flex gap-2 items-center'>
-                                <input type="date" value={invDate} onChange={e=>setInvDate(e.target.value)} className="flex-1 nook-input text-sm text-center" title="入库日期"/>
-                                <button onClick={handleAddInv} className="bg-[#4299E1] text-white rounded-xl px-4 py-2 font-bold text-sm shadow-sm active:scale-95 flex items-center justify-center gap-1 shrink-0"><Icon path={Icons.Plus} size={16}/> 存入</button>
-                            </div>
-                        </div>
 
-                        <div className="space-y-2">
-                            {sharedInventory.length === 0 && <CabinEmptyState icon="📦" text="收纳箱是空的，快去存点东西吧" />}
-                            {sharedInventory.map((item, i) => { 
-                                const storedDays = getStoredDays(item.expire); 
-                                let sCol = 'bg-green-100 text-green-600 border-green-200'; 
-                                if (storedDays > 30) { sCol = 'bg-orange-100 text-orange-500 border-orange-200'; } 
-                                if (storedDays > 90) { sCol = 'bg-red-100 text-red-500 border-red-200'; } 
-                                return (
-                                    <div key={item.id} className="nook-card p-3 flex items-center justify-between group animate-pop" style={{animationDelay: `${i*30}ms`}}>
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center text-[10px] font-black border-2 ${sCol} shrink-0`}>
-                                                <span className="opacity-60 text-[8px]">已存</span>
-                                                <span className='text-base leading-none'>{storedDays}</span>
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-[#59584D] text-sm">{item.name}</div>
-                                                <div className="text-[10px] text-gray-400 font-bold">{item.expire ? `${item.expire} 入库` : '未知时间'}</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 shrink-0">
-                                            <button onClick={()=>handleQty(item, -1)} className="w-6 h-6 bg-white rounded text-gray-500 shadow-sm flex items-center justify-center hover:text-red-500 active:scale-95 font-bold">-</button>
-                                            <span className="text-sm font-black w-6 text-center">{item.quantity}</span>
-                                            <button onClick={()=>handleQty(item, 1)} className="w-6 h-6 bg-white rounded text-gray-500 shadow-sm flex items-center justify-center hover:text-[#4299E1] active:scale-95 font-bold">+</button>
-                                        </div>
-                                    </div>
-                                ); 
-                            })}
-                        </div>
-                    </div>
-                );
-            case 'funds':
-                return (
-                    <div className='space-y-4'>
-                        <DetailHeader title="募捐计划" icon={Icons.Gift} color="#E53E3E" />
-                        <div className="nook-card border-2 border-dashed border-[#E53E3E] bg-red-50/50 p-4 animate-pop">
-                            <h4 className="text-xs font-bold text-red-500 mb-3 text-center">发起新的募捐计划</h4>
-                            <div className="flex flex-col gap-2">
-                                <input value={projName} onChange={e=>setProjName(e.target.value)} className="nook-input text-sm" placeholder="目标名称 (如: 周末大餐)"/>
-                                <div className="flex gap-2">
-                                    <input type="number" value={projGoal} onChange={e=>setProjGoal(e.target.value)} className="nook-input text-sm flex-1 text-center" placeholder="目标金额"/>
-                                    <button onClick={handleCreateProj} className="bg-[#E53E3E] text-white rounded-xl px-4 font-bold text-sm shadow-[0_3px_0_#9B2C2C] active:shadow-none active:translate-y-[3px] transition-all shrink-0">发起</button>
+                switch (activeModule) {
+                    case 'tasks': return (<div className="flex flex-col flex-1 min-h-0 h-full"><DetailHeader title="共享任务" icon={Icons.Leaf} color="#3DAA86" /><div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">{sharedTasks.length === 0 && <CabinEmptyState icon="📝" text="小屋暂无共享任务" />}{sharedTasks.map((t, i) => (<div key={t.id} className="nook-card border-l-8 border-[#3DAA86] p-4 flex items-center justify-between animate-pop" style={{animationDelay: `${i*30}ms`}}><div className="flex items-center gap-3 min-w-0"><div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${t.completed ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}><Icon path={Icons.Leaf} size={20} /></div><div className="min-w-0 flex-1"><div className="font-bold text-[#59584D] text-sm truncate">{t.title}</div><div className="text-[10px] text-gray-400 font-bold mt-0.5">{t.completed ? '已全员完成' : '进行中'}</div></div></div><span className="text-xs font-black text-[#3DAA86] bg-[#E6FFFA] px-2 py-1 rounded-full shrink-0">({t.completedBy?.length||0}/{memberCount})</span></div>))}</div></div>);
+                    case 'shopping': return (<div className="flex flex-col flex-1 min-h-0 h-full"><DetailHeader title="购物清单" icon={Icons.ShoppingBag} color="#F6E05E" /><div className="space-y-3">{sharedShopping.length === 0 && <CabinEmptyState icon="🛒" text="购物清单是空的" />}{sharedShopping.map((i, idx) => (<div key={i.id} className={`nook-card border-l-8 border-[#F6E05E] p-4 flex items-center justify-between ${i.checked ? 'opacity-50 grayscale' : ''} animate-pop`} style={{animationDelay: `${idx*30}ms`}}><div className="flex items-center gap-3 min-w-0"><div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${i.checked ? 'bg-gray-200 text-gray-400' : 'bg-yellow-100 text-yellow-600'}`}><Icon path={Icons.ShoppingBag} size={20} /></div><div className="min-w-0 flex-1"><div className={`font-bold text-[#59584D] text-sm truncate ${i.checked ? 'line-through' : ''}`}>{i.name}</div><span className="text-[10px] font-black text-[#D69E2E] bg-[#FFFBEB] px-1.5 py-0.5 rounded mt-0.5 inline-block">({i.checkedBy?.length||0}/{memberCount})</span></div></div>{i.price > 0 && <div className="text-xs font-black text-purple-600 bg-purple-100 px-2 py-1 rounded-full shrink-0">{i.price.toLocaleString()}</div>}</div>))}</div></div>);
+                    case 'inventory': return (<div className='space-y-3'><DetailHeader title="收纳箱" icon={Icons.Box} color="#4299E1" /><div className="nook-card border-l-8 border-[#4299E1] p-4 flex flex-col gap-3 animate-pop"><h4 className='text-xs font-bold text-gray-400'>快速存入收纳箱</h4><div className="flex gap-2 items-center"><input value={invName} onChange={e=>setInvName(e.target.value)} className="flex-[2] nook-input text-sm" placeholder="物品名称 (如: 鸡蛋)"/><input type="number" value={invQty} onChange={e=>setInvQty(e.target.value)} className="w-12 nook-input text-sm text-center" placeholder="Qty"/></div><div className='flex gap-2 items-center'><input type="date" value={invDate} onChange={e=>setInvDate(e.target.value)} className="flex-1 nook-input text-sm text-center" title="入库日期"/><button onClick={handleAddInv} className="bg-[#4299E1] text-white rounded-xl px-4 py-2 font-bold text-sm shadow-sm active:scale-95 flex items-center justify-center gap-1 shrink-0"><Icon path={Icons.Plus} size={16}/> 存入</button></div></div><div className="space-y-2">{sharedInventory.length === 0 && <CabinEmptyState icon="📦" text="收纳箱是空的，快去存点东西吧" />}{sharedInventory.map((item, i) => { const storedDays = getStoredDays(item.expire); let sCol = 'bg-green-100 text-green-600 border-green-200'; if (storedDays > 30) { sCol = 'bg-orange-100 text-orange-500 border-orange-200'; } if (storedDays > 90) { sCol = 'bg-red-100 text-red-500 border-red-200'; } return (<div key={item.id} className="nook-card p-3 flex items-center justify-between group animate-pop" style={{animationDelay: `${i*30}ms`}}><div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center text-[10px] font-black border-2 ${sCol} shrink-0`}><span className="opacity-60 text-[8px]">已存</span><span className='text-base leading-none'>{storedDays}</span></div><div><div className="font-bold text-[#59584D] text-sm">{item.name}</div><div className="text-[10px] text-gray-400 font-bold">{item.expire ? `${item.expire} 入库` : '未知时间'}</div></div></div><div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 shrink-0"><button onClick={()=>handleQty(item, -1)} className="w-6 h-6 bg-white rounded text-gray-500 shadow-sm flex items-center justify-center hover:text-red-500 active:scale-95 font-bold">-</button><span className="text-sm font-black w-6 text-center">{item.quantity}</span><button onClick={()=>handleQty(item, 1)} className="w-6 h-6 bg-white rounded text-gray-500 shadow-sm flex items-center justify-center hover:text-[#4299E1] active:scale-95 font-bold">+</button></div></div>); })}</div></div>);
+                    case 'funds': return (<div className='space-y-4'><DetailHeader title="募捐计划" icon={Icons.Gift} color="#E53E3E" /><div className="nook-card border-2 border-dashed border-[#E53E3E] bg-red-50/50 p-4 animate-pop"><h4 className="text-xs font-bold text-red-500 mb-3 text-center">发起新的募捐计划</h4><div className="flex flex-col gap-2"><input value={projName} onChange={e=>setProjName(e.target.value)} className="nook-input text-sm" placeholder="目标名称 (如: 周末大餐)"/><div className="flex gap-2"><input type="number" value={projGoal} onChange={e=>setProjGoal(e.target.value)} className="nook-input text-sm flex-1 text-center" placeholder="目标金额"/><button onClick={handleCreateProj} className="bg-[#E53E3E] text-white rounded-xl px-4 font-bold text-sm shadow-[0_3px_0_#9B2C2C] active:shadow-none active:translate-y-[3px] transition-all shrink-0">发起</button></div></div></div>{sharedProjects.length === 0 && <CabinEmptyState icon="🎁" text="暂无募捐项目" />}{sharedProjects.map((p, i) => { const percent = Math.min(100, (p.current / p.goal) * 100); const isCompleted = percent >= 100; return (<div key={p.id} className={`nook-card p-4 rounded-2xl shadow-sm border-[4px] border-[#E2E8F0] relative overflow-hidden animate-pop ${isCompleted ? 'opacity-70 grayscale' : 'border-[#E67E22]'}`}>{isCompleted && <div className="absolute inset-0 bg-[#E67E22]/10 flex items-center justify-center font-black text-[#D35400] text-xl z-20 backdrop-blur-[1px]">募捐达成！🎉</div>}<div className="flex gap-4 relative z-10"><div className="w-14 h-16 shrink-0"><GyroidIcon dancing={!isCompleted}/></div><div className="flex-1 min-w-0"><div className="font-black text-[#59584D] text-lg truncate mb-1">{p.title}</div><div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden mb-2 border border-gray-200"><div className="bg-[#E67E22] h-full transition-all duration-1000" style={{width: `${percent}%`}}></div></div><div className="flex justify-between items-end"><div className="text-xs font-bold text-gray-400">{percent.toFixed(0)}%</div><div className="text-sm font-black text-[#E67E22]">{p.current.toLocaleString()} <span className="text-gray-400 text-[10px]">/ {p.goal.toLocaleString()}</span></div></div></div></div>{!isCompleted && (<div className="mt-4 pt-3 border-t border-dashed border-gray-200"><div className="flex items-center gap-3 mb-2 text-[10px] font-bold text-gray-500"><span className="shrink-0">支付来源:</span><label className="flex items-center gap-1 cursor-pointer hover:text-[#3DAA86]"><input type="radio" name={`pay-${p.id}`} checked={donateSource==='pocket'} onChange={()=>setDonateSource('pocket')}/> 口袋 ({stats?.pocket.toLocaleString()})</label><label className="flex items-center gap-1 cursor-pointer hover:text-[#3DAA86]"><input type="radio" name={`pay-${p.id}`} checked={donateSource==='savings'} onChange={()=>setDonateSource('savings')}/> 存款 ({stats?.savings.toLocaleString()})</label></div><div className="flex gap-2"><input type="number" placeholder="金额" value={donateVal} onChange={e=>setDonateVal(e.target.value)} className="w-20 bg-gray-50 rounded-lg px-2 text-center text-sm font-bold outline-none border border-gray-200 focus:border-[#E67E22]"/><button onClick={()=>handleDonate(p.id)} className="flex-1 bg-[#E67E22] text-white rounded-lg text-sm font-bold py-2 shadow-[0_3px_0_#D35400] active:shadow-none active:translate-y-[3px] relative transition-all">捐赠</button></div></div>)}</div>); })}</div>);
+                    
+                    case 'board':
+                        return (
+                            <div className='space-y-4'>
+                                <DetailHeader title="公告留言" icon={Icons.Megaphone} color="#F59E0B" />
+                                {/* 发布留言 */}
+                                <div className="nook-card border-l-8 border-[#F59E0B] p-4 flex gap-3 animate-pop z-10 relative">
+                                    <textarea value={msgContent} onChange={e=>setMsgContent(e.target.value)} placeholder="写下新的心情或是公告..." className="flex-1 bg-[#FFFBEB] rounded-lg p-2 text-sm font-bold text-[#92400E] placeholder-[#D97706]/50 outline-none resize-none h-20 border-2 border-yellow-100 focus:border-[#F59E0B] transition-colors"/>
+                                    <button onClick={handlePostMsg} className="bg-[#F59E0B] text-white rounded-xl w-10 h-10 flex items-center justify-center shadow-sm active:scale-95 shrink-0 self-end mb-1"><Icon path={Icons.Send} size={16}/></button>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        {sharedProjects.length === 0 && <CabinEmptyState icon="🎁" text="暂无募捐项目" />}
-                        {sharedProjects.map((p, i) => { 
-                            const percent = Math.min(100, (p.current / p.goal) * 100); 
-                            const isCompleted = percent >= 100;
-                            return (
-                                <div key={p.id} className={`nook-card p-4 rounded-2xl shadow-sm border-[4px] border-[#E2E8F0] relative overflow-hidden animate-pop ${isCompleted ? 'opacity-70 grayscale' : 'border-[#E67E22]'}`}>
-                                    
-                                    {isCompleted && <div className="absolute inset-0 bg-[#E67E22]/10 flex items-center justify-center font-black text-[#D35400] text-xl z-20 backdrop-blur-[1px]">募捐达成！🎉</div>}
-                                    
-                                    <div className="flex gap-4 relative z-10">
-                                        <div className="w-14 h-16 shrink-0"><GyroidIcon dancing={!isCompleted}/></div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="font-black text-[#59584D] text-lg truncate mb-1">{p.title}</div>
-                                            <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden mb-2 border border-gray-200">
-                                                <div className="bg-[#E67E22] h-full transition-all duration-1000" style={{width: `${percent}%`}}></div>
-                                            </div>
-                                            <div className="flex justify-between items-end">
-                                                <div className="text-xs font-bold text-gray-400">{percent.toFixed(0)}%</div>
-                                                <div className="text-sm font-black text-[#E67E22]">{p.current.toLocaleString()} <span className="text-gray-400 text-[10px]">/ {p.goal.toLocaleString()}</span></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    {!isCompleted && (
-                                        <div className="mt-4 pt-3 border-t border-dashed border-gray-200">
-                                            <div className="flex items-center gap-3 mb-2 text-[10px] font-bold text-gray-500">
-                                                <span className="shrink-0">支付来源:</span>
-                                                <label className="flex items-center gap-1 cursor-pointer hover:text-[#3DAA86]"><input type="radio" name={`pay-${p.id}`} checked={donateSource==='pocket'} onChange={()=>setDonateSource('pocket')}/> 口袋 ({stats?.pocket.toLocaleString()})</label>
-                                                <label className="flex items-center gap-1 cursor-pointer hover:text-[#3DAA86]"><input type="radio" name={`pay-${p.id}`} checked={donateSource==='savings'} onChange={()=>setDonateSource('savings')}/> 存款 ({stats?.savings.toLocaleString()})</label>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <input type="number" placeholder="金额" value={donateVal} onChange={e=>setDonateVal(e.target.value)} className="w-20 bg-gray-50 rounded-lg px-2 text-center text-sm font-bold outline-none border border-gray-200 focus:border-[#E67E22]"/>
-                                                <button onClick={()=>handleDonate(p.id)} className="flex-1 bg-[#E67E22] text-white rounded-lg text-sm font-bold py-2 shadow-[0_3px_0_#D35400] active:shadow-none active:translate-y-[3px] relative transition-all">捐赠</button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                );
-            case 'board':
-                return (
-                    <div className='space-y-3'>
-                        <DetailHeader title="公告留言" icon={Icons.Megaphone} color="#F59E0B" />
-                        <div className="nook-card border-l-8 border-[#F59E0B] p-4 flex gap-3 animate-pop">
-                            <textarea value={msgContent} onChange={e=>setMsgContent(e.target.value)} placeholder="发布新公告..." className="flex-1 bg-[#FFFBEB] rounded-lg p-2 text-sm font-bold text-[#92400E] placeholder-[#D97706]/50 outline-none resize-none h-16 border-2 border-yellow-100 focus:border-[#F59E0B] transition-colors"/>
-                            <button onClick={handlePostMsg} className="bg-[#F59E0B] text-white rounded-xl w-10 h-10 flex items-center justify-center shadow-sm active:scale-95 shrink-0 self-start"><Icon path={Icons.Send} size={16}/></button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            {sharedMessages.length === 0 && <CabinEmptyState icon="📢" text="暂无公告" />}
-                            {sharedMessages.map((m, i) => (
-                                <div key={m.id} className="bg-[#FEF9E3] p-3 rounded-xl shadow-sm border-t-8 border-[#FCD34D] relative animate-pop" style={{animationDelay: `${i*50}ms`}}>
-                                    <div className="text-sm font-bold text-[#78350F] leading-relaxed break-all min-h-[40px]">{m.content}</div>
-                                    <div className="mt-2 flex justify-between items-center border-t border-[#FDE68A] pt-1">
-                                        <span className="text-[10px] text-[#B45309] font-bold">{m.author}</span>
-                                        <span className="text-[8px] text-[#D97706] opacity-70">{new Date(m.createdAt).toLocaleDateString()}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
-            case 'wiki':
-                // [修复]：增加Wiki详情页子视图
-                if (selectedWiki) {
-                    return (
-                        <div className="flex flex-col flex-1 min-h-0 animate-pop h-full relative">
-                            {/* 详情页头部 */}
-                            <div className="flex items-center justify-between mb-4 shrink-0">
-                                <button 
-                                    onClick={() => setSelectedWiki(null)} 
-                                    className="p-2 -ml-2 rounded-full text-gray-500 transition-colors hover:bg-gray-200"
-                                >
-                                    <Icon path={Icons.ArrowLeft} size={24}/>
-                                </button>
-                                <div className="flex items-center gap-3 flex-1">
-                                    <div className="w-10 h-10 rounded-full bg-[#667EEA] flex items-center justify-center text-white shadow-sm"><Icon path={Icons.Bookmark} size={20}/></div>
-                                    <h2 className="text-xl font-black opacity-80">知识详情</h2>
-                                </div>
-                            </div>
-                            
-                            {/* 详情页内容 */}
-                            <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
-                                {selectedWiki.image && (
-                                    <div className="w-full rounded-2xl overflow-hidden shadow-sm mb-4 border-4 border-white bg-gray-100">
-                                        <img src={selectedWiki.image} className="w-full h-auto object-contain" onClick={() => window.open(selectedWiki.image, '_blank')} />
-                                    </div>
-                                )}
-                                <div className="px-2">
-                                    <h1 className="text-2xl font-black text-[#59584D] mb-2 leading-tight">{selectedWiki.title}</h1>
-                                    <div className="text-xs font-bold text-gray-300 mb-6 flex items-center gap-2">
-                                        <Icon path={Icons.Leaf} size={12}/>
-                                        {new Date(selectedWiki.updatedTimestamp || selectedWiki.timestamp || selectedWiki.createdAt).toLocaleDateString()}
-                                    </div>
-                                    <div className="text-sm font-medium text-[#59584D] leading-7 whitespace-pre-wrap select-text">
-                                        {selectedWiki.content || "（没有填写内容）"}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                }
-
-                // [修复]：列表视图（默认），增加点击事件
-                return (
-                    <div className="space-y-3">
-                        <DetailHeader title="共享知识" icon={Icons.Bookmark} color="#667EEA" />
-                        {sharedWiki.length === 0 && <CabinEmptyState icon="📚" text="小屋暂无共享知识" />}
-                        {sharedWiki.map((item, i) => (
-                            <div 
-                                key={item.id} 
-                                onClick={() => setSelectedWiki(item)} // 关键修复：点击查看详情
-                                className="nook-card border-l-8 border-[#667EEA] p-4 flex items-center justify-between animate-pop cursor-pointer hover:bg-indigo-50/50 transition-colors"
-                                style={{animationDelay: `${i*30}ms`}}
-                            >
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><Icon path={Icons.Bookmark} size={20}/></div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="font-bold text-[#59584D] text-sm truncate">{item.title}</div>
-                                        <div className="text-[10px] text-gray-400 font-bold mt-0.5 truncate">{item.content}</div>
-                                    </div>
-                                </div>
-                                {item.image && <div className='w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-gray-100 bg-gray-200'><img src={item.image} alt='thumb' className='w-full h-full object-cover'/></div>}
-                            </div>
-                        ))}
-                    </div>
-                );
-            case 'report':
-                return (
-                    <div className="space-y-4 animate-pop">
-                        <DetailHeader title="岛务周报" icon={Icons.Clipboard} color="#805AD5" />
-                        <div className="nook-card border-l-8 border-[#805AD5] bg-gradient-to-r from-purple-50 to-white">
-                            <p className="text-xs text-gray-400 font-bold">过去 7 天的岛屿生活记录</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="nook-card border-2 border-green-100 text-center">
-                                <div className="text-3xl font-black text-[#3DAA86]">{weeklyReport?.totalCompleted}</div>
-                                <div className="text-[10px] text-gray-400 font-bold mt-1">本周完成任务</div>
-                            </div>
-                            <div className="nook-card border-2 border-yellow-100 text-center">
-                                <div className="text-3xl font-black text-[#D69E2E]">{weeklyReport?.totalSpent?.toLocaleString()}</div>
-                                <div className="text-[10px] text-gray-400 font-bold mt-1">本周购物花费</div>
-                            </div>
-                        </div>
-
-                        {weeklyReport?.mvpUser ? (
-                            <div className="bg-gradient-to-br from-[#FFFBEB] to-white p-4 rounded-3xl shadow-md border-4 border-yellow-200 relative overflow-hidden text-center">
-                                <div className="absolute top-0 left-0 w-full h-2 bg-yellow-300"></div>
-                                <div className="text-xs font-black text-yellow-600 mb-3 tracking-widest uppercase">✨ Star of the Week ✨</div>
-                                <div className="w-20 h-20 rounded-full border-4 border-white shadow-md mx-auto mb-2 overflow-hidden relative">
-                                    <img src={weeklyReport.mvpUser.avatar} className="w-full h-full object-cover"/>
-                                    <div className="absolute bottom-0 left-0 right-0 bg-yellow-400 text-white text-[9px] font-black py-0.5">MVP</div>
-                                </div>
-                                <div className="font-black text-[#59584D] text-lg">{weeklyReport.mvpUser.username}</div>
-                                <div className="text-xs font-bold text-gray-400">本周完成了 {weeklyReport.maxScore} 个任务，辛苦啦！</div>
-                            </div>
-                        ) : (
-                            <CabinEmptyState icon="🏅" text="本周还没有产生家务之星哦" />
-                        )}
-
-                        <div className="nook-card p-5">
-                            <h4 className="text-xs font-bold text-gray-400 mb-4 ml-1">活跃度统计 (任务完成数)</h4>
-                            <div className="flex items-end justify-around gap-2 h-32 px-2 pb-2">
-                                {weeklyReport?.chartData.map(d => {
-                                    const heightPercent = d.score > 0 ? (d.score / weeklyReport.chartMax) * 100 : 5;
-                                    return (
-                                        <div key={d.name} className="flex flex-col items-center justify-end h-full w-10 group">
-                                            <div className="text-[10px] font-black text-[#3DAA86] mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{d.score}</div>
-                                            <div className="w-full bg-[#3DAA86] rounded-t-lg transition-all duration-1000 ease-out relative group-hover:bg-[#2F855A]" style={{height: `${heightPercent}%`}}></div>
-                                            <div className="w-8 h-8 rounded-full border-2 border-white shadow-sm overflow-hidden -mt-3 z-10">
-                                                <img src={d.avatar} className="w-full h-full object-cover"/>
-                                            </div>
-                                            <span className="text-[8px] font-bold text-gray-500 mt-1 truncate max-w-full">{d.name}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                );
-            case 'starjar':
-                 // [新增] 统计自己收到的总星星数
-                 const totalReceived = myReceivedStars.reduce((sum, s) => sum + (s.stars || 0), 0);
-
-                 return (
-                    <div className="flex flex-col flex-1 min-h-0 animate-pop h-full relative">
-                        <DetailHeader title="星星瓶" icon={Icons.Star} color="#FF9F43" />
-                        
-                        {/* 顶部成员选择 (发送给谁) */}
-                        {cabin && members.length > 1 && (
-                             <div className='flex flex-wrap gap-2 mb-4 items-center shrink-0 justify-center'>
-                                <span className='text-xs font-bold text-gray-500 shrink-0'>发送给：</span>
-                                {members.filter(m => m.id !== user.id).map(m => (
-                                    <button 
-                                        key={m.id} 
-                                        onClick={() => setRecipientId(m.id)} 
-                                        className={`text-xs font-black px-3 py-1 rounded-full transition-all ${recipientId === m.id ? 'bg-[#FF9F43] text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-white'}`}
-                                    >
-                                        {m.username}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-3 flex-1'>
-                            {/* A. 发送区：显示发给【当前选中对象】的数量 */}
-                            <div className='nook-card p-4 border-2 border-dashed border-[#FF9F43] text-center relative overflow-hidden flex flex-col justify-center min-h-[180px]'>
-                                <div className='text-[10px] font-black text-gray-400 mb-3'>你的思念（已发送）</div>
-                                <div className='text-6xl font-black text-[#FF9F43] mb-4'>
-                                    {recipientId && recipientId !== user.id ? (mySentStars.find(s => s.recipientId === recipientId)?.stars || 0) : '0'}
-                                </div>
-                                
-                                <button 
-                                    onClick={handleAddStar} 
-                                    disabled={!recipientId || recipientId === user.id} 
-                                    className="nook-btn w-full bg-[#FF9F43] shadow-[0_5px_0_#E67E22] py-3 text-sm flex items-center justify-center gap-2"
-                                >
-                                    <Icon path={Icons.Star} size={16}/> 放一颗星星
-                                </button>
-                                {!recipientId && <div className="text-[9px] text-gray-400 mt-2">请先在上方选择发送对象</div>}
-                            </div>
-                            
-                            {/* B. 接收区：显示【我收到的总数】 */}
-                            <div className='nook-card p-4 border-2 border-dashed border-[#667EEA] relative overflow-hidden flex flex-col min-h-[180px]'>
-                                <div className='text-[10px] font-black text-gray-400 mb-1 text-center'>Ta们想你了（共收到）</div>
-                                
-                                {/* 显示总数 */}
-                                <div className='text-6xl font-black text-[#667EEA] mb-2 text-center'>
-                                    {totalReceived}
-                                </div>
-                                <div className="text-[9px] text-center text-gray-400 mb-3 font-bold border-b border-gray-100 pb-2">
-                                    收件箱详情
-                                </div>
-
-                                <div className='flex-1 overflow-y-auto space-y-2 pt-1 no-scrollbar'>
-                                    {myReceivedStars.filter(s => s.stars > 0).length === 0 ? (
-                                        <p className='text-xs text-gray-400 text-center py-4'>瓶子空空的...</p>
-                                    ) : (
-                                        myReceivedStars.filter(s => s.stars > 0).map(s => {
-                                            const sender = members.find(m => m.id === s.senderId);
-                                            if (!sender) return null;
-                                            return (
-                                                <div key={s.senderId} className='flex justify-between items-center bg-indigo-50/50 p-2 rounded-lg animate-pop'>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-6 h-6 rounded-full overflow-hidden border border-white">
-                                                            <img src={sender.avatar} className="w-full h-full object-cover" alt={sender.username}/>
-                                                        </div>
-                                                        <span className='text-sm font-black text-[#59584D]'>{sender.username}</span>
-                                                    </div>
-                                                    <div className='flex items-center gap-2'>
-                                                        <span className='text-lg font-black text-[#667EEA]'>+{s.stars}</span>
-                                                        <button onClick={() => handleClearStars(s.senderId, s.stars)} className='bg-[#667EEA] text-white px-3 py-1 rounded-full text-[10px] font-bold active:scale-95 transition-all shadow-sm'>
-                                                            收下
-                                                        </button>
-                                                    </div>
+                                <div className="space-y-4 pb-20">
+                                    {sharedMessages.length === 0 && <CabinEmptyState icon="📢" text="暂无留言" />}
+                                    {sharedMessages.map((m, i) => {
+                                        const msgComments = sharedComments.filter(c => c.messageId === m.id).sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+                                        return (
+                                            <div key={m.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pop" style={{animationDelay: `${i*50}ms`}}>
+                                                <div className="p-4 bg-[#FEF9E3] border-b border-[#FDE68A]">
+                                                    <div className="flex justify-between items-start mb-2"><div className="flex items-center gap-2"><span className="w-6 h-6 rounded-full bg-[#F59E0B] text-white flex items-center justify-center text-xs font-black">{m.author ? m.author[0] : 'U'}</span><span className="text-xs font-black text-[#B45309]">{m.author}</span></div><span className="text-[9px] text-[#D97706] opacity-70 font-bold">{new Date(m.createdAt).toLocaleDateString()}</span></div>
+                                                    <div className="text-sm font-bold text-[#78350F] leading-relaxed break-all whitespace-pre-wrap">{m.content}</div>
                                                 </div>
-                                            );
-                                        })
-                                    )}
+                                                {msgComments.length > 0 && (
+                                                    <div className="bg-gray-50/50 p-3 space-y-2 border-t border-gray-100">{msgComments.map(c => (<div key={c.id} className="flex gap-2 text-xs"><span className="font-black text-gray-500 shrink-0">{c.author}:</span><span className="text-gray-600 break-all">{c.content}</span></div>))}</div>
+                                                )}
+                                                <div className="p-2 bg-white flex items-center gap-2">
+                                                    {replyTo === m.id ? (
+                                                        <><input autoFocus value={replyContent} onChange={e => setReplyContent(e.target.value)} onKeyDown={e => {if(e.key === 'Enter' && replyContent.trim()) {addComment(m.id, replyContent, cabin.id); setReplyContent(''); setReplyTo(null);}}} placeholder="回复..." className="flex-1 bg-gray-100 rounded-full px-3 py-1.5 text-xs font-bold text-gray-600 outline-none focus:bg-white focus:ring-2 focus:ring-[#F59E0B]/30 transition-all"/><button onClick={() => {if(replyContent.trim()) {addComment(m.id, replyContent, cabin.id); setReplyContent(''); setReplyTo(null);}}} className="text-[#F59E0B] font-bold text-xs px-2">发送</button></>
+                                                    ) : (<button onClick={() => setReplyTo(m.id)} className="w-full text-left px-3 py-1.5 text-xs text-gray-400 font-bold hover:bg-gray-50 rounded-full transition-colors">写评论...</button>)}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                );
-            default: 
-                return <CabinEmptyState icon="❓" text="应用加载错误或页面不存在" />;
-        }
-    };
+                        );
 
-
-    // --- 主渲染逻辑 ---
-    if (activeModule) {
-        return (
-            <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
-                <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
-                    {renderModuleDetail()}
-                </div>
-                <div className="pt-4 pb-6">
-                    <button onClick={()=>{if(confirm("确定要退出小屋吗？")) leaveCabin();}} className="w-full text-center text-xs text-red-400 font-bold opacity-60 hover:opacity-100 transition-opacity py-3 bg-red-50/50 rounded-xl">退出当前小屋</button>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
-            
-            <div className="shrink-0 space-y-3 mb-4">
-                <div className="bg-[#FF9F43] rounded-[28px] text-white p-5 shadow-xl relative overflow-hidden">
-                    <div className="relative z-10 flex justify-between items-start">
-                        <div>
-                            <h2 className="text-2xl font-black leading-tight">{cabin.name}</h2>
-                            <div className="text-[10px] font-bold opacity-80 mt-1 flex items-center gap-1">
-                                邀请码: <span onClick={() => { navigator.clipboard.writeText(cabin.code); showFeedback('邀请码已复制！'); }} className="bg-white/20 px-2 py-0.5 rounded select-all font-mono tracking-widest cursor-pointer hover:bg-white/40 active:scale-95 transition-all">{cabin.code}</span>
+                    case 'wiki':
+                        if (selectedWiki) {
+                            return (<div className="flex flex-col flex-1 min-h-0 animate-pop h-full relative"><div className="flex items-center justify-between mb-4 shrink-0"><button onClick={() => setSelectedWiki(null)} className="p-2 -ml-2 rounded-full text-gray-500 transition-colors hover:bg-gray-200"><Icon path={Icons.ArrowLeft} size={24}/></button><div className="flex items-center gap-3 flex-1"><div className="w-10 h-10 rounded-full bg-[#667EEA] flex items-center justify-center text-white shadow-sm"><Icon path={Icons.Bookmark} size={20}/></div><h2 className="text-xl font-black opacity-80">知识详情</h2></div></div><div className="flex-1 overflow-y-auto no-scrollbar pb-6">{selectedWiki.image && (<div className="w-full rounded-2xl overflow-hidden shadow-sm mb-4 border-4 border-white bg-gray-100"><img src={selectedWiki.image} className="w-full h-auto object-contain" onClick={() => window.open(selectedWiki.image, '_blank')} /></div>)}<div className="px-2"><h1 className="text-2xl font-black text-[#59584D] mb-2 leading-tight">{selectedWiki.title}</h1><div className="text-xs font-bold text-gray-300 mb-6 flex items-center gap-2"><Icon path={Icons.Leaf} size={12}/>{new Date(selectedWiki.updatedTimestamp || selectedWiki.timestamp || selectedWiki.createdAt).toLocaleDateString()}</div><div className="text-sm font-medium text-[#59584D] leading-7 whitespace-pre-wrap select-text">{selectedWiki.content || "（没有填写内容）"}</div></div></div></div>);
+                        }
+                        return (<div className="space-y-3"><DetailHeader title="共享知识" icon={Icons.Bookmark} color="#667EEA" />{sharedWiki.length === 0 && <CabinEmptyState icon="📚" text="小屋暂无共享知识" />}{sharedWiki.map((item, i) => (<div key={item.id} onClick={() => setSelectedWiki(item)} className="nook-card border-l-8 border-[#667EEA] p-4 flex items-center justify-between animate-pop cursor-pointer hover:bg-indigo-50/50 transition-colors" style={{animationDelay: `${i*30}ms`}}><div className="flex items-center gap-3 min-w-0"><div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><Icon path={Icons.Bookmark} size={20}/></div><div className="min-w-0 flex-1"><div className="font-bold text-[#59584D] text-sm truncate">{item.title}</div><div className="text-[10px] text-gray-400 font-bold mt-0.5 truncate">{item.content}</div></div></div>{item.image && <div className='w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-gray-100 bg-gray-200'><img src={item.image} alt='thumb' className='w-full h-full object-cover'/></div>}</div>))}</div>);
+                    
+                    case 'report': return (<div className="space-y-4 animate-pop"><DetailHeader title="岛务周报" icon={Icons.Clipboard} color="#805AD5" /><div className="nook-card border-l-8 border-[#805AD5] bg-gradient-to-r from-purple-50 to-white"><p className="text-xs text-gray-400 font-bold">过去 7 天的岛屿生活记录</p></div><div className="grid grid-cols-2 gap-3"><div className="nook-card border-2 border-green-100 text-center"><div className="text-3xl font-black text-[#3DAA86]">{weeklyReport?.totalCompleted}</div><div className="text-[10px] text-gray-400 font-bold mt-1">本周完成任务</div></div><div className="nook-card border-2 border-yellow-100 text-center"><div className="text-3xl font-black text-[#D69E2E]">{weeklyReport?.totalSpent?.toLocaleString()}</div><div className="text-[10px] text-gray-400 font-bold mt-1">本周购物花费</div></div></div>{weeklyReport?.mvpUser ? (<div className="bg-gradient-to-br from-[#FFFBEB] to-white p-4 rounded-3xl shadow-md border-4 border-yellow-200 relative overflow-hidden text-center"><div className="absolute top-0 left-0 w-full h-2 bg-yellow-300"></div><div className="text-xs font-black text-yellow-600 mb-3 tracking-widest uppercase">✨ Star of the Week ✨</div><div className="w-20 h-20 rounded-full border-4 border-white shadow-md mx-auto mb-2 overflow-hidden relative"><img src={weeklyReport.mvpUser.avatar} className="w-full h-full object-cover"/><div className="absolute bottom-0 left-0 right-0 bg-yellow-400 text-white text-[9px] font-black py-0.5">MVP</div></div><div className="font-black text-[#59584D] text-lg">{weeklyReport.mvpUser.username}</div><div className="text-xs font-bold text-gray-400">本周完成了 {weeklyReport.maxScore} 个任务，辛苦啦！</div></div>) : (<CabinEmptyState icon="🏅" text="本周还没有产生家务之星哦" />)}<div className="nook-card p-5"><h4 className="text-xs font-bold text-gray-400 mb-4 ml-1">活跃度统计 (任务完成数)</h4><div className="flex items-end justify-around gap-2 h-32 px-2 pb-2">{weeklyReport?.chartData.map(d => { const heightPercent = d.score > 0 ? (d.score / weeklyReport.chartMax) * 100 : 5; return (<div key={d.name} className="flex flex-col items-center justify-end h-full w-10 group"><div className="text-[10px] font-black text-[#3DAA86] mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{d.score}</div><div className="w-full bg-[#3DAA86] rounded-t-lg transition-all duration-1000 ease-out relative group-hover:bg-[#2F855A]" style={{height: `${heightPercent}%`}}></div><div className="w-8 h-8 rounded-full border-2 border-white shadow-sm overflow-hidden -mt-3 z-10"><img src={d.avatar} className="w-full h-full object-cover"/></div><span className="text-[8px] font-bold text-gray-500 mt-1 truncate max-w-full">{d.name}</span></div>); })}</div></div></div>);
+                    
+                    case 'starjar':
+                         const myPendingList = myReceivedStars.filter(s => (s.stars || 0) > 0);
+                         const totalPending = myPendingList.reduce((sum, s) => sum + s.stars, 0);
+                         const totalCollected = myReceivedStars.reduce((sum, s) => sum + (s.collectedStars || 0), 0);
+        
+                         return (
+                            <div className="flex flex-col flex-1 min-h-0 animate-pop h-full relative">
+                                <DetailHeader title="星星瓶" icon={Icons.Star} color="#FF9F43" />
+                                {cabin && members.length > 1 && (<div className='flex flex-wrap gap-2 mb-4 items-center shrink-0 justify-center'><span className='text-xs font-bold text-gray-500 shrink-0'>发送给：</span>{members.filter(m => m.id !== user.id).map(m => (<button key={m.id} onClick={() => setRecipientId(m.id)} className={`text-xs font-black px-3 py-1 rounded-full transition-all ${recipientId === m.id ? 'bg-[#FF9F43] text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-white'}`}>{m.username}</button>))}</div>)}
+                                <div className='flex flex-col gap-4 flex-1 pb-10 overflow-y-auto no-scrollbar'>
+                                    <div className='nook-card p-5 border-2 border-dashed border-[#FF9F43] text-center relative overflow-hidden bg-orange-50/30'><div className='text-[10px] font-black text-gray-400 mb-2'>投递思念</div><div className='text-4xl font-black text-[#FF9F43] mb-3'>{recipientId && recipientId !== user.id ? (mySentStars.find(s => s.recipientId === recipientId)?.stars || 0) : '0'} <span className="text-xs text-gray-400 ml-1 font-bold">颗 (未收)</span></div><button onClick={handleAddStar} disabled={!recipientId || recipientId === user.id} className="nook-btn w-full bg-[#FF9F43] shadow-[0_5px_0_#E67E22] py-3 text-sm flex items-center justify-center gap-2"><Icon path={Icons.Star} size={16}/> 放一颗星星</button>{!recipientId && <div className="text-[9px] text-gray-400 mt-2">请先选择对象</div>}</div>
+                                    <div className="relative w-full aspect-square max-h-[240px] mx-auto mt-2">
+                                        <div className="absolute inset-0 bg-[#E0F2F1]/80 rounded-[40px] border-4 border-[#80CBC4] shadow-lg flex items-center justify-center flex-col overflow-hidden backdrop-blur-sm">
+                                            <div className="absolute top-0 left-0 right-0 h-4 bg-[#B2DFDB]"></div>
+                                            <div className="absolute bottom-0 left-0 right-0 bg-[#FFD54F] transition-all duration-1000 ease-in-out opacity-80" style={{height: `${Math.min(100, Math.max(5, totalCollected / 10))}%`}}></div>
+                                            <div className="relative z-10 text-center"><div className="text-5xl font-black text-[#FF9F43] drop-shadow-sm">{totalCollected}</div><div className="text-xs font-bold text-[#00695C] mt-1 bg-white/60 px-2 py-0.5 rounded-full">已收集的星星</div></div>
+                                            <div className="absolute top-10 left-4 text-yellow-400 opacity-50 animate-bounce" style={{animationDuration: '3s'}}>★</div><div className="absolute bottom-10 right-6 text-yellow-400 opacity-50 animate-bounce" style={{animationDuration: '4s'}}>★</div>
+                                        </div>
+                                    </div>
+                                    {totalPending > 0 && (<div className="nook-card p-4 border-l-8 border-[#667EEA] animate-pop bg-indigo-50/50"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-gray-500">有新的星星漂流过来了!</span><span className="text-xs font-black text-[#667EEA] bg-white px-2 py-0.5 rounded-full shadow-sm">{totalPending} 颗</span></div><div className="space-y-2">{myPendingList.map(s => { const sender = members.find(m => m.id === s.senderId); if (!sender) return null; return (<div key={s.senderId} className="flex items-center justify-between bg-white p-2 rounded-xl shadow-sm"><div className="flex items-center gap-2"><img src={sender.avatar} className="w-6 h-6 rounded-full border border-gray-100"/><span className="text-xs font-bold text-gray-600">{sender.username}</span></div><button onClick={() => clearStars(user.id, s.senderId, cabin.id)} className="bg-[#667EEA] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold shadow-[0_2px_0_#5A67D8] active:shadow-none active:translate-y-[2px] transition-all">收入瓶中 (+{s.stars})</button></div>); })}</div></div>)}
+                                </div>
                             </div>
-                        </div>
-                        <div className='flex flex-col items-center gap-1'>
-                            <button onClick={fetchMembers} className={`p-2 rounded-full bg-white/30 hover:bg-white/50 active:scale-90 transition-all ${isRefreshing?'animate-spin':''}`} title="刷新成员"><Icon path={Icons.Refresh} size={16} className="text-white"/></button>
-                            <span className="text-xs font-bold bg-white/30 px-2 py-0.5 rounded-full">{memberCount}人</span>
-                        </div>
-                    </div>
-                    <div className="absolute -right-4 -bottom-8 text-white opacity-10 pointer-events-none"><Icon path={Icons.Home} size={100}/></div>
-                </div>
-            </div>
+                        );
+                    default: return <CabinEmptyState icon="❓" text="应用加载错误或页面不存在" />;
+                }
+            };
 
-            <div className="bg-white/60 p-2 rounded-xl backdrop-blur-sm shadow-sm flex items-center gap-2 overflow-x-auto no-scrollbar relative mb-4 shrink-0">
-                <span className="text-xs font-black text-gray-500 shrink-0 ml-1">在线：</span>
-                {members.map(m => (
-                    <div key={m.id} className="flex flex-col items-center shrink-0 w-12 relative group">
-                        <div 
-                            className={`w-10 h-10 rounded-full border-2 shadow-sm overflow-hidden bg-gray-200 cursor-pointer transition-transform hover:scale-105 ${m.id===user.id?'border-[#3DAA86] ring-2 ring-[#3DAA86]/30': 'border-white'}`} 
-                            onClick={() => m.id === user.id ? setShowStatusMenu(!showStatusMenu) : showFeedback(`${m.username} 当前状态：${STATUS_OPTIONS.find(s => s.id === m.status)?.label || '在线'}`, 'success')}
-                        >
-                            <img src={m.avatar} className="w-full h-full object-cover"/>
-                        </div>
-                        <div className="absolute -bottom-1 -right-1 bg-white rounded-full text-[10px] shadow-sm leading-none p-0.5 border border-gray-100">{getStatusIcon(m.status)}</div>
-                        <span className="text-[9px] font-bold text-[#59584D] truncate w-full text-center mt-1">{m.username}</span>
-                    </div>
-                ))}
-                
-                {showStatusMenu && (
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full mb-2 bg-white rounded-xl shadow-xl p-2 z-50 flex flex-wrap gap-2 animate-pop border-4 border-[#3DAA86] after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-0 after:border-l-[10px] after:border-r-[10px] after:border-t-[10px] after:border-t-[#3DAA86] after:border-l-transparent after:border-r-transparent">
-                        <div className='absolute inset-1 rounded-lg border-2 border-dashed border-gray-200 pointer-events-none'></div>
-                        {STATUS_OPTIONS.map(s => (
-                            <button key={s.id} onClick={()=>handleChangeStatus(s)} className="text-xl hover:scale-110 transition-transform p-1.5 rounded-full hover:bg-gray-50" title={s.label}>
-                                {s.icon}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
+            if (activeModule) return (<div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative"><div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">{renderModuleDetail()}</div><div className="pt-4 pb-6"><button onClick={()=>{if(confirm("确定要退出小屋吗？")) leaveCabin();}} className="w-full text-center text-xs text-red-400 font-bold opacity-60 hover:opacity-100 transition-opacity py-3 bg-red-50/50 rounded-xl">退出当前小屋</button></div></div>);
 
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
-                
-                <div className="nook-card border-l-8 border-[#805AD5] p-4">
-                    <div className='flex justify-between items-center mb-2'>
-                        <h4 className='text-xs font-black text-gray-400'>岛务周报摘要</h4>
-                        <button onClick={() => setActiveModule('report')} className='text-[10px] font-bold text-[#805AD5] transition'>完整报告 →</button>
-                    </div>
-                    <div className='grid grid-cols-3 text-center'>
-                        <div><div className='text-xl font-black text-[#3DAA86]'>{weeklyReport?.totalCompleted}</div><div className='text-[10px] text-gray-500'>任务完成</div></div>
-                        <div><div className='text-xl font-black text-[#D69E2E]'>{weeklyReport?.totalSpent?.toLocaleString()}</div><div className='text-[10px] text-gray-500'>本周花费</div></div>
-                        <div><div className='text-xl font-black text-purple-500'>{(weeklyReport?.mvpUser ? weeklyReport.maxScore : 0)}</div><div className='text-[10px] text-gray-500'>MVP 贡献</div></div>
+            return (
+                <div className="flex flex-col flex-1 min-h-0 screen-enter h-full relative">
+                    <div className="shrink-0 space-y-3 mb-4"><div className="bg-[#FF9F43] rounded-[28px] text-white p-5 shadow-xl relative overflow-hidden"><div className="relative z-10 flex justify-between items-start"><div><h2 className="text-2xl font-black leading-tight">{cabin.name}</h2><div className="text-[10px] font-bold opacity-80 mt-1 flex items-center gap-1">邀请码: <span onClick={() => { navigator.clipboard.writeText(cabin.code); showFeedback('邀请码已复制！'); }} className="bg-white/20 px-2 py-0.5 rounded select-all font-mono tracking-widest cursor-pointer hover:bg-white/40 active:scale-95 transition-all">{cabin.code}</span></div></div><div className='flex flex-col items-center gap-1'><button onClick={fetchMembers} className={`p-2 rounded-full bg-white/30 hover:bg-white/50 active:scale-90 transition-all ${isRefreshing?'animate-spin':''}`} title="刷新成员"><Icon path={Icons.Refresh} size={16} className="text-white"/></button><span className="text-xs font-bold bg-white/30 px-2 py-0.5 rounded-full">{memberCount}人</span></div></div><div className="absolute -right-4 -bottom-8 text-white opacity-10 pointer-events-none"><Icon path={Icons.Home} size={100}/></div></div></div>
+                    <div className="bg-white/60 p-2 rounded-xl backdrop-blur-sm shadow-sm flex items-center gap-2 overflow-x-auto no-scrollbar relative mb-4 shrink-0"><span className="text-xs font-black text-gray-500 shrink-0 ml-1">在线：</span>{members.map(m => (<div key={m.id} className="flex flex-col items-center shrink-0 w-12 relative group"><div className={`w-10 h-10 rounded-full border-2 shadow-sm overflow-hidden bg-gray-200 cursor-pointer transition-transform hover:scale-105 ${m.id===user.id?'border-[#3DAA86] ring-2 ring-[#3DAA86]/30': 'border-white'}`} onClick={() => m.id === user.id ? setShowStatusMenu(!showStatusMenu) : showFeedback(`${m.username} 当前状态：${STATUS_OPTIONS.find(s => s.id === m.status)?.label || '在线'}`, 'success')}><img src={m.avatar} className="w-full h-full object-cover"/></div><div className="absolute -bottom-1 -right-1 bg-white rounded-full text-[10px] shadow-sm leading-none p-0.5 border border-gray-100">{getStatusIcon(m.status)}</div><span className="text-[9px] font-bold text-[#59584D] truncate w-full text-center mt-1">{m.username}</span></div>))}{showStatusMenu && (<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full mb-2 bg-white rounded-xl shadow-xl p-2 z-50 flex flex-wrap gap-2 animate-pop border-4 border-[#3DAA86] after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-0 after:border-l-[10px] after:border-r-[10px] after:border-t-[10px] after:border-t-[#3DAA86] after:border-l-transparent after:border-r-transparent"><div className='absolute inset-1 rounded-lg border-2 border-dashed border-gray-200 pointer-events-none'></div>{STATUS_OPTIONS.map(s => (<button key={s.id} onClick={()=>handleChangeStatus(s)} className="text-xl hover:scale-110 transition-transform p-1.5 rounded-full hover:bg-gray-50" title={s.label}>{s.icon}</button>))}</div>)}</div>
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
+                        <div className="nook-card border-l-8 border-[#805AD5] p-4"><div className='flex justify-between items-center mb-2'><h4 className='text-xs font-black text-gray-400'>岛务周报摘要</h4><button onClick={() => setActiveModule('report')} className='text-[10px] font-bold text-[#805AD5] transition'>完整报告 →</button></div><div className='grid grid-cols-3 text-center'><div><div className='text-xl font-black text-[#3DAA86]'>{weeklyReport?.totalCompleted}</div><div className='text-[10px] text-gray-500'>任务完成</div></div><div><div className='text-xl font-black text-[#D69E2E]'>{weeklyReport?.totalSpent?.toLocaleString()}</div><div className='text-[10px] text-gray-500'>本周花费</div></div><div><div className='text-xl font-black text-purple-500'>{(weeklyReport?.mvpUser ? weeklyReport.maxScore : 0)}</div><div className='text-[10px] text-gray-500'>MVP 贡献</div></div></div></div>
+                        <h4 className='text-xs font-black text-gray-500 ml-2 mt-4'>功能模块</h4><div className="grid grid-cols-2 md:grid-cols-3 gap-3">{MODULE_LIST.filter(m => m.id !== 'report').map(item => (<CabinWidget key={item.id} id={item.id} label={item.l} icon={item.i} color={item.c} count={item.count} onClick={() => setActiveModule(item.id)} isActive={activeModule === item.id} />))}</div>
+                        <div className="pt-4 pb-6"><button onClick={()=>{if(confirm("确定要退出小屋吗？")) leaveCabin();}} className="w-full text-center text-xs text-red-400 font-bold opacity-60 hover:opacity-100 transition-opacity py-3 bg-red-50/50 rounded-xl">退出当前小屋</button></div>
                     </div>
                 </div>
-
-                <h4 className='text-xs font-black text-gray-500 ml-2 mt-4'>功能模块</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {MODULE_LIST.filter(m => m.id !== 'report').map(item => (
-                        <CabinWidget 
-                            key={item.id} 
-                            id={item.id}
-                            label={item.l}
-                            icon={item.i}
-                            color={item.c}
-                            count={item.count}
-                            onClick={() => setActiveModule(item.id)}
-                            isActive={activeModule === item.id}
-                        />
-                    ))}
-                </div>
-
-                <div className="pt-4 pb-6">
-                    <button onClick={()=>{if(confirm("确定要退出小屋吗？")) leaveCabin();}} className="w-full text-center text-xs text-red-400 font-bold opacity-60 hover:opacity-100 transition-opacity py-3 bg-red-50/50 rounded-xl">退出当前小屋</button>
-                </div>
-            </div>
-            
-        </div>
-    );
-};
-
+            );
+        };
 // 通用空状态组件 - 全局定义
 const CabinEmptyState = ({ icon, text }) => (
     <div className="text-center text-gray-400 py-10 text-xs font-bold opacity-60 flex flex-col items-center gap-2 bg-white/50 rounded-xl">
@@ -2727,6 +2254,7 @@ const App = () => {
 
     const [cabin, setCabin] = useState(null);
     const [memberCount, setMemberCount] = useState(1);
+	const [comments, setComments] = useState([]);
     
     const [isAuthReady, setIsAuthReady] = useState(false);
     const [isCoreLoading, setIsCoreLoading] = useState(true);
@@ -2801,13 +2329,14 @@ const App = () => {
                         
                         // ↓↓↓↓↓ 重点修改在这里 ↓↓↓↓↓
                         // 确保左边的中括号里包含 ideaObjs，并且顺序与右边一致
-                        const [fitLogsObjs, voiceObjs, wikiObjs, shoppingObjs, decisionObjs, ideaObjs] = await Promise.all([ 
+                        const [fitLogsObjs, voiceObjs, wikiObjs, shoppingObjs, decisionObjs, ideaObjs,commentObjs] = await Promise.all([ 
                             getList('NookFitLog'), 
                             getList('NookVoiceWork'), 
                             getList('NookWiki'), 
                             getList('NookShoppingItem'), 
                             getList('NookDecisionOption'),
-                            getList('NookIdea') // 这一行获取的数据赋值给上面的 ideaObjs
+                            getList('NookIdea'), // 这一行获取的数据赋值给上面的 ideaObjs
+							getList('NookComment')
                         ]);
          
             // --- 独立拉取新表 (容错) ---
@@ -2824,6 +2353,12 @@ const App = () => {
             // ...
             setInventory(invObjs.map(i => ({ ...simplify(i), cabinId: i.get('cabin')?.id }))); 
             setStarJar(starJarObjs.map(s => ({ ...simplify(s), cabinId: s.get('cabin')?.id }))); // 【修正】
+			setComments(commentObjs.map(c => ({
+			    ...simplify(c), 
+			    messageId: c.get('message')?.id, // 关联的留言ID
+			    cabinId: c.get('cabin')?.id,
+			    author: c.get('authorName')
+			})));
             // ...
 
             const simplifyWithExtra = (obj) => {
@@ -2871,64 +2406,7 @@ const App = () => {
     const showFeedback = useCallback((message, type='success') => { setFeedback({ message, type, id: Date.now() }); }, []);
     const handleLogout = () => { AV.User.logOut(); setLocalUser(null); setCurrentApp(null); setUserDoc(null); fetchData(null); };
 
-    // ================= 动作集合 =================
-    const cabinActions = {
-        createCabin: async (name) => { const Cabin = AV.Object.extend('NookCabin'); const c = new Cabin(); const code = Math.floor(100000 + Math.random() * 900000).toString(); c.set('name', name); c.set('code', code); c.set('owner', localUser); try { const savedCabin = await c.save(); localUser.set('cabin', savedCabin); await localUser.save(); setCabin(simplify(savedCabin)); setMemberCount(1); showFeedback("小屋创建成功！"); } catch(e) { showFeedback("创建失败", "error"); } },
-        joinCabin: async (code) => { const q = new AV.Query('NookCabin'); q.equalTo('code', code); try { const foundCabin = await q.first(); if (!foundCabin) return alert("找不到该邀请码"); localUser.set('cabin', foundCabin); await localUser.save(); setCabin(simplify(foundCabin)); showFeedback("欢迎入住！"); fetchData(localUser, false); } catch(e) { showFeedback("加入失败", "error"); } },
-        leaveCabin: async () => { localUser.unset('cabin'); try { await localUser.save(); setCabin(null); setMemberCount(1); showFeedback("已退出小屋"); fetchData(localUser, false); } catch(e) { showFeedback("退出失败", "error"); } },
-        addMessage: async (content, cabinId) => {
-            const Msg = AV.Object.extend('NookMessage'); const m = new Msg();
-            m.set('content', content); m.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId)); m.set('author', localUser); m.set('authorName', localUser.getUsername());
-            const optim = { id: 'temp'+Date.now(), content, author: localUser.getUsername(), createdAt: new Date().toISOString(), cabinId };
-            setMessages(prev => [optim, ...prev]);
-            try { await m.save(); } catch(e){ console.log(e); }
-        },
-        createProject: async (title, goal, cabinId) => {
-            const Proj = AV.Object.extend('NookProject'); const p = new Proj();
-            p.set('title', title); p.set('goal', goal); p.set('current', 0); p.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
-            const optim = { id: 'temp'+Date.now(), title, goal, current: 0, cabinId };
-            setProjects(prev => [optim, ...prev]);
-            try { const saved = await p.save(); setProjects(prev => prev.map(x => x.id === optim.id ? { ...simplify(saved), cabinId } : x)); } catch(e){}
-        },
-        donateProject: async (pid, amount, source) => {
-            const proj = projects.find(p => p.id === pid); if(!proj) return;
-            if ((source==='pocket' ? stats.pocket : stats.savings) < amount) return showFeedback("余额不足！", "error");
-            
-            setProjects(prev => prev.map(p => p.id === pid ? { ...p, current: p.current + amount } : p));
-            const newStats = { ...stats }; newStats[source] -= amount; setStats(newStats);
-            
-            const tempLedgerId = 'temp_l_' + Date.now();
-            const optimLedger = { id: tempLedgerId, type: 'expense', amount: amount, category: '募捐', note: `捐赠给: ${proj.title}`, date: new Date().toLocaleDateString(), timestamp: Date.now() };
-            setLedger(prev => [optimLedger, ...prev]);
-
-            try {
-                const pObj = AV.Object.createWithoutData('NookProject', pid); pObj.increment('current', amount);
-                const sObj = AV.Object.createWithoutData('NookStats', stats.id); sObj.increment(source, -amount);
-                const Ledger = AV.Object.extend('NookLedger'); const lObj = new Ledger(); lObj.set('user', localUser); lObj.set('type', 'expense'); lObj.set('amount', amount); lObj.set('category', '募捐'); lObj.set('note', `捐赠给: ${proj.title}`); lObj.set('date', new Date().toLocaleDateString()); lObj.set('timestamp', Date.now());
-                await AV.Object.saveAll([pObj, sObj, lObj]);
-                setLedger(prev => prev.map(x => x.id === tempLedgerId ? simplify(lObj) : x));
-                showFeedback("捐赠成功！已记账。");
-            } catch(e) { console.error(e); }
-        },
-        updateStatus: async (statusId) => { localUser.set('status', statusId); try { await localUser.save(); setUserDoc(prev => ({...prev, status: statusId})); } catch(e){} },
-        
-        // [新增] 库存管理
-        addInventory: async (name, qty, date, cabinId) => {
-            const Inv = AV.Object.extend('NookInventoryItem'); const i = new Inv();
-            i.set('name', name); i.set('quantity', qty); i.set('expire', date); i.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
-            const optim = { id: 'temp'+Date.now(), name, quantity: qty, expire: date, cabinId };
-            setInventory(prev => [optim, ...prev]);
-            try { const saved = await i.save(); setInventory(prev => prev.map(x => x.id === optim.id ? { ...simplify(saved), cabinId } : x)); } catch(e){}
-        },
-        updateInventory: async (id, qty) => {
-            setInventory(prev => prev.map(i => i.id === id ? { ...i, quantity: qty } : i));
-            try { const obj = AV.Object.createWithoutData('NookInventoryItem', id); obj.set('quantity', qty); await obj.save(); } catch(e){}
-        },
-        deleteInventory: async (id) => {
-            setInventory(prev => prev.filter(i => i.id !== id));
-            try { const obj = AV.Object.createWithoutData('NookInventoryItem', id); await obj.destroy(); } catch(e){}
-        }
-    };
+  
 	// ... (cabinActions 结束)
 	// ==========================================
 	    // App 内部的 Actions 更新
@@ -3002,78 +2480,175 @@ const App = () => {
 	            } catch(e) {} 
 	        } 
 	    };
-	// ↓↓↓ 【新增】星星瓶动作 ↓↓↓
 	const starJarActions = {
-	    // 增加星星：A 想 B 了
-	    addStar: async (recipientId, cabinId) => {
-	        const senderId = localUser.id;
-	        const StarJar = AV.Object.extend('NookStarJar');
+	            // A 想 B 了：增加一颗星星（放入待收取状态）
+	            addStar: async (recipientId, cabinId) => {
+	                const senderId = localUser.id;
+	                const StarJar = AV.Object.extend('NookStarJar');
+	                
+	                const q = new AV.Query('NookStarJar');
+	                q.equalTo('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
+	                q.equalTo('senderId', senderId);
+	                q.equalTo('recipientId', recipientId);
 	        
-	        // 1. 查找或创建星星瓶记录
-	        const q = new AV.Query('NookStarJar');
-	        q.equalTo('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
-	        q.equalTo('senderId', senderId);
-	        q.equalTo('recipientId', recipientId);
+	                let starObj = await q.first();
+	        
+	                if (!starObj) {
+	                    starObj = new StarJar();
+	                    starObj.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
+	                    starObj.set('senderId', senderId);
+	                    starObj.set('recipientId', recipientId);
+	                    starObj.set('stars', 0); // 待收取的（漂流中）
+	                    starObj.set('collectedStars', 0); // 已存入瓶子的（永久存储）
+	                }
+	        
+	                starObj.increment('stars', 1);
+	                starObj.set('lastSentAt', Date.now()); 
+	        
+	                // 乐观更新
+	                const optim = simplify(starObj);
+	                optim.stars = (starObj.get('stars') || 0) + 1;
+	                optim.collectedStars = starObj.get('collectedStars') || 0;
+	        
+	                setStarJar(prev => {
+	                    const index = prev.findIndex(s => s.senderId === senderId && s.recipientId === recipientId);
+	                    if (index !== -1) return prev.map((s, i) => i === index ? optim : s);
+	                    return [...prev, optim];
+	                });
+	        
+	                try { await starObj.save(); } catch(e) { console.error(e); }
+	            },
+	            
+	            // B 看到星星并收下：将 stars (待收) 转移到 collectedStars (已存)
+	            clearStars: async (recipientId, senderId, cabinId) => {
+	                const q = new AV.Query('NookStarJar');
+	                q.equalTo('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
+	                q.equalTo('senderId', senderId);
+	                q.equalTo('recipientId', recipientId);
+	                
+	                const starObj = await q.first();
+	                if (!starObj) return;
 	
-	        let starObj = await q.first();
-	
-	        if (!starObj) {
-	            starObj = new StarJar();
-	            starObj.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
-	            starObj.set('senderId', senderId);
-	            starObj.set('recipientId', recipientId);
-	            starObj.set('stars', 0);
-	        }
-	
-	        starObj.increment('stars', 1);
-	        starObj.set('lastSentAt', Date.now()); 
-	
-	        // 2. 乐观更新 UI
-	        const optim = simplify(starObj);
-	        optim.stars = (starObj.get('stars') || 0) + 1;
-	
-	        setStarJar(prev => {
-	            const index = prev.findIndex(s => s.senderId === senderId && s.recipientId === recipientId);
-	            if (index !== -1) {
-	                return prev.map((s, i) => i === index ? optim : s);
+	                const pendingCount = starObj.get('stars') || 0;
+	                if (pendingCount === 0) return;
+	        
+	                // 乐观更新 UI: stars 归零，collectedStars 增加
+	                setStarJar(prev => prev.map(s => 
+	                    s.senderId === senderId && s.recipientId === recipientId 
+	                    ? { ...s, stars: 0, collectedStars: (s.collectedStars || 0) + pendingCount } 
+	                    : s
+	                ));
+	        
+	                // 数据库操作：原子操作保证数据安全
+	                starObj.set('stars', 0);
+	                starObj.increment('collectedStars', pendingCount);
+	        
+	                try {
+	                    await starObj.save();
+	                    showFeedback(`成功收集了 ${pendingCount} 颗星星！`);
+	                } catch(e) {
+	                    console.error("收取失败", e);
+	                    showFeedback("收取失败", "error");
+	                }
 	            }
-	            return [...prev, optim];
-	        });
+	        };
 	
-	        try {
-	            await starObj.save();
-	        } catch(e) {
-	            console.error("保存星星失败", e);
-	            showFeedback("星星未能保存到云端", "error");
-	        }
-	    },
-	    
-	    // 清空星星：B 看到星星并收下
-	    clearStars: async (recipientId, senderId, cabinId) => {
-	        const q = new AV.Query('NookStarJar');
-	        q.equalTo('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
-	        q.equalTo('senderId', senderId);
-	        q.equalTo('recipientId', recipientId);
-	        
-	        const starObj = await q.first();
-	        if (!starObj) return;
+	const cabinActions = {
+	            createCabin: async (name) => { const Cabin = AV.Object.extend('NookCabin'); const c = new Cabin(); const code = Math.floor(100000 + Math.random() * 900000).toString(); c.set('name', name); c.set('code', code); c.set('owner', localUser); try { const savedCabin = await c.save(); localUser.set('cabin', savedCabin); await localUser.save(); setCabin(simplify(savedCabin)); setMemberCount(1); showFeedback("小屋创建成功！"); } catch(e) { showFeedback("创建失败", "error"); } },
+	            joinCabin: async (code) => { const q = new AV.Query('NookCabin'); q.equalTo('code', code); try { const foundCabin = await q.first(); if (!foundCabin) return alert("找不到该邀请码"); localUser.set('cabin', foundCabin); await localUser.save(); setCabin(simplify(foundCabin)); showFeedback("欢迎入住！"); fetchData(localUser, false); } catch(e) { showFeedback("加入失败", "error"); } },
+	            leaveCabin: async () => { localUser.unset('cabin'); try { await localUser.save(); setCabin(null); setMemberCount(1); showFeedback("已退出小屋"); fetchData(localUser, false); } catch(e) { showFeedback("退出失败", "error"); } },
+	            
+	            addMessage: async (content, cabinId) => {
+	                const Msg = AV.Object.extend('NookMessage'); const m = new Msg();
+	                m.set('content', content); m.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId)); m.set('author', localUser); m.set('authorName', localUser.getUsername());
+	                const optim = { id: 'temp'+Date.now(), content, author: localUser.getUsername(), createdAt: new Date().toISOString(), cabinId };
+	                setMessages(prev => [optim, ...prev]);
+	                try { await m.save(); } catch(e){ console.log(e); }
+	            },
 	
-	        // 1. 乐观更新 UI
-	        setStarJar(prev => prev.map(s => 
-	            s.senderId === senderId && s.recipientId === recipientId ? { ...s, stars: 0 } : s
-	        ));
+	            // [新增] 添加评论
+	            addComment: async (messageId, content, cabinId) => {
+	                const Comment = AV.Object.extend('NookComment');
+	                const c = new Comment();
+	                
+	                c.set('content', content);
+	                c.set('message', AV.Object.createWithoutData('NookMessage', messageId));
+	                c.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
+	                c.set('author', localUser);
+	                c.set('authorName', localUser.getUsername());
 	
-	        starObj.set('stars', 0);
+	                const tempId = 'temp_c_' + Date.now();
+	                const optim = { 
+	                    id: tempId, 
+	                    content, 
+	                    messageId, 
+	                    cabinId, 
+	                    author: localUser.getUsername(), 
+	                    createdAt: new Date().toISOString() 
+	                };
 	
-	        try {
-	            await starObj.save();
-	            showFeedback("星星已收下！");
-	        } catch(e) {
-	            console.error("清空星星失败", e);
-	            showFeedback("清空失败", "error");
-	        }
-	    }
-	};
+	                setComments(prev => [...prev, optim]); 
+	
+	                try {
+	                    const saved = await c.save();
+	                    setComments(prev => prev.map(x => x.id === tempId ? {
+	                        ...simplify(saved), 
+	                        messageId, 
+	                        cabinId, 
+	                        author: localUser.getUsername()
+	                    } : x));
+	                    showFeedback("评论已发布");
+	                } catch (e) {
+	                    console.error(e);
+	                    showFeedback("评论失败", "error");
+	                }
+	            },
+	
+	            createProject: async (title, goal, cabinId) => {
+	                const Proj = AV.Object.extend('NookProject'); const p = new Proj();
+	                p.set('title', title); p.set('goal', goal); p.set('current', 0); p.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
+	                const optim = { id: 'temp'+Date.now(), title, goal, current: 0, cabinId };
+	                setProjects(prev => [optim, ...prev]);
+	                try { const saved = await p.save(); setProjects(prev => prev.map(x => x.id === optim.id ? { ...simplify(saved), cabinId } : x)); } catch(e){}
+	            },
+	            donateProject: async (pid, amount, source) => {
+	                const proj = projects.find(p => p.id === pid); if(!proj) return;
+	                if ((source==='pocket' ? stats.pocket : stats.savings) < amount) return showFeedback("余额不足！", "error");
+	                
+	                setProjects(prev => prev.map(p => p.id === pid ? { ...p, current: p.current + amount } : p));
+	                const newStats = { ...stats }; newStats[source] -= amount; setStats(newStats);
+	                
+	                const tempLedgerId = 'temp_l_' + Date.now();
+	                const optimLedger = { id: tempLedgerId, type: 'expense', amount: amount, category: '募捐', note: `捐赠给: ${proj.title}`, date: new Date().toLocaleDateString(), timestamp: Date.now() };
+	                setLedger(prev => [optimLedger, ...prev]);
+	
+	                try {
+	                    const pObj = AV.Object.createWithoutData('NookProject', pid); pObj.increment('current', amount);
+	                    const sObj = AV.Object.createWithoutData('NookStats', stats.id); sObj.increment(source, -amount);
+	                    const Ledger = AV.Object.extend('NookLedger'); const lObj = new Ledger(); lObj.set('user', localUser); lObj.set('type', 'expense'); lObj.set('amount', amount); lObj.set('category', '募捐'); lObj.set('note', `捐赠给: ${proj.title}`); lObj.set('date', new Date().toLocaleDateString()); lObj.set('timestamp', Date.now());
+	                    await AV.Object.saveAll([pObj, sObj, lObj]);
+	                    setLedger(prev => prev.map(x => x.id === tempLedgerId ? simplify(lObj) : x));
+	                    showFeedback("捐赠成功！已记账。");
+	                } catch(e) { console.error(e); }
+	            },
+	            updateStatus: async (statusId) => { localUser.set('status', statusId); try { await localUser.save(); setUserDoc(prev => ({...prev, status: statusId})); } catch(e){} },
+	            
+	            addInventory: async (name, qty, date, cabinId) => {
+	                const Inv = AV.Object.extend('NookInventoryItem'); const i = new Inv();
+	                i.set('name', name); i.set('quantity', qty); i.set('expire', date); i.set('cabin', AV.Object.createWithoutData('NookCabin', cabinId));
+	                const optim = { id: 'temp'+Date.now(), name, quantity: qty, expire: date, cabinId };
+	                setInventory(prev => [optim, ...prev]);
+	                try { const saved = await i.save(); setInventory(prev => prev.map(x => x.id === optim.id ? { ...simplify(saved), cabinId } : x)); } catch(e){}
+	            },
+	            updateInventory: async (id, qty) => {
+	                setInventory(prev => prev.map(i => i.id === id ? { ...i, quantity: qty } : i));
+	                try { const obj = AV.Object.createWithoutData('NookInventoryItem', id); obj.set('quantity', qty); await obj.save(); } catch(e){}
+	            },
+	            deleteInventory: async (id) => {
+	                setInventory(prev => prev.filter(i => i.id !== id));
+	                try { const obj = AV.Object.createWithoutData('NookInventoryItem', id); await obj.destroy(); } catch(e){}
+	            }
+	        };
 	// ...
 
     // ==========================================
@@ -3479,6 +3054,8 @@ const passportActions = { updatePassport: async (newPassport) => { setPassport(n
                                 inventory={inventory} 
                                 // ↓↓↓ 【新增 Props】↓↓↓
                                 starJar={starJar} 
+								comments={comments} 
+								    addComment={cabinActions.addComment}
                                 addStar={starJarActions.addStar}
                                 clearStars={starJarActions.clearStars}
                                 // ↑↑↑ 【新增 Props】↑↑↑
